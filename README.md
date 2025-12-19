@@ -27,4 +27,12 @@ Set up your information in the `.env` file for your imap server, your user and p
 ```shell
 cheapchocolate start
 ```
-> You can run `cheapchocolate`, and it will create the file for you.
+> You can run `cheapchocolate start`, and it will create the file for you.
+
+## See Also
+
+- Github: https://github.com/bouli/cheapchocolate
+- PyPI: https://pypi.org/project/cheapchocolate/
+
+## License
+This package is distributed under the [MIT license](https://opensource.org/license/MIT).

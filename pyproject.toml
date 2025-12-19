@@ -13,7 +13,7 @@ dependencies = [
 
 
 [project.scripts]
-ohmyscrapper = "cheapchocolate:main"
+cheapchocolate = "cheapchocolate:main"
 
 
 [tool.bumpversion]
