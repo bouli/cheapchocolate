@@ -16,7 +16,7 @@ def get_imap_connection():
         )
         return None
     try:
-        print("☎️ Calling your imap server...")
+        print("☎️  Calling your imap server...")
         imap_connection = imaplib.IMAP4_SSL(os.getenv("server"))
         imap_connection.login(os.getenv("user"), os.getenv("password"))
         print("🙌 It worked!")
@@ -32,6 +32,36 @@ def create_env_file():
             f.write("password=mypassword\n")
             f.write("server=imap.my-mail.server\n")
 
+def get_folders():
+    imap_connection=get_imap_connection()
+
+    print("🗣️  Asking for your folders...")
+    result, folders_list = imap_connection.list()
+
+    if len(folders_list) == 0:
+        print(f"😅 You have no new folder...")
+        imap_connection.close()
+        imap_connection.logout()
+        return
+    print("These are your folder from your online 📫 mailbox: ")
+    for index, folder in enumerate(folders_list):
+        folder_name = _clean_folder_name(folder)
+        print(f"[{index}] {folder_name}")
+
+    user_option = -1
+    while user_option < 0 or user_option >= len(folders_list):
+        user_option = input("Choose one of the online 🗂️ folders above to receive the emails or `q` to quit: ")
+        if user_option == "q":
+            return
+        elif user_option.isdigit():
+            user_option = int(user_option)
+            if user_option >= 0 and user_option < len(folders_list):
+                get_mails(mail_folder=_clean_folder_name(folders_list[user_option]), imap_connection=imap_connection)
+    return
+
+def _clean_folder_name(folder):
+    folder_name = str(folder).split('"/" "')[1].replace("\"'","")
+    return folder_name
 
 def get_mails(mail_folder="inbox", imap_connection=None, local_mails=[]):
 
@@ -45,7 +75,7 @@ def get_mails(mail_folder="inbox", imap_connection=None, local_mails=[]):
 
     imap_connection.select(mail_folder)
 
-    print("🗣️ Asking for the today`s mail...")
+    print(f"🗣️  Asking for the today`s mail in {mail_folder}...")
     result, data = imap_connection.search(None, f"SINCE {time}")
     remote_mails = data[0].split()
 
@@ -61,7 +91,7 @@ def get_mails(mail_folder="inbox", imap_connection=None, local_mails=[]):
         imap_connection.logout()
         return
 
-    print(f"🗃️ You have {len(mails_to_receive)} mails...")
+    print(f"🗃️  You have {len(mails_to_receive)} mails...")
 
     for email_id in mails_to_receive:
         load_email_by_id(imap_connection=imap_connection, email_id=email_id, mail_folder=mail_folder)
@@ -101,7 +131,7 @@ def load_email_by_id(imap_connection, email_id, mail_folder="inbox"):
         )
         mail_string = add_mail_line(
             mail_string=mail_string,
-            line="subject: " + extract_from_header(msg=msg, key="subject"),
+            line="subject: \"" + extract_from_header(msg=msg, key="subject") + "\"",
         )
         mail_string = add_mail_line(
             mail_string=mail_string,
@@ -109,7 +139,7 @@ def load_email_by_id(imap_connection, email_id, mail_folder="inbox"):
         )
         mail_string = add_mail_line(
             mail_string=mail_string,
-            line="mail_folder: " + mail_folder,
+            line="mail_folder: \"" + mail_folder + "\"",
         )
         mail_string = add_mail_line(mail_string=mail_string, line="-" * 10)
         mail_string = add_mail_line(mail_string=mail_string, line=body)
