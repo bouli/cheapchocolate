@@ -5,7 +5,7 @@ import imaplib
 import email
 from email.header import decode_header
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, timedelta
 # import getpass
 
 load_dotenv()
@@ -20,14 +20,22 @@ def main():
         "start",
         help="📨 Get today's emails.",
     )
+
+    start_parser = subparsers.add_parser(
+        "check-mailbox",
+        help="📫 Check local mailbox.",
+    )
     args = parser.parse_args()
 
-    if args.command =="start":
+    if args.command == "start" :
         get_mails()
+
     return
+
 def get_mails():
+
     today = datetime.today().date()
-    time = today.strftime("%d-%b-%Y")
+    time = (today + timedelta(days=-1)).strftime("%d-%b-%Y")
     if os.getenv("user") is None or os.getenv("user") == "myuser@my-mail.server":
         create_env_file()
         print(
@@ -46,11 +54,24 @@ def get_mails():
     imap_connection.select("inbox")
 
     print("🗣️ Asking for the today`s mail...")
-    result, data = imap_connection.search(None, f"ON {time}")
+    result, data = imap_connection.search(None, f"SINCE {time}")
+    remote_mails = data[0].split()
 
-    print(f"🗃️ You have {len(data[0].split())} mails...")
+    local_mails = get_local_mails()
+    mails_to_receive = []
+    for remote_mail_id in remote_mails:
+        if str(remote_mail_id).replace("'","") not in local_mails:
+            mails_to_receive.append(remote_mail_id)
 
-    for email_id in data[0].split():
+    if len(mails_to_receive) == 0:
+        print(f"📭 You have no new mails...")
+        imap_connection.close()
+        imap_connection.logout()
+        return
+
+    print(f"🗃️ You have {len(mails_to_receive)} mails...")
+
+    for email_id in mails_to_receive:
         load_email_by_id(imap_connection, email_id)
     imap_connection.close()
     imap_connection.logout()
@@ -62,6 +83,7 @@ def load_email_by_id(imap_connection, email_id):
 
     result, msg_data = imap_connection.fetch(email_id, "(RFC822)")
     msg = email.message_from_bytes(msg_data[0][1])
+
     if msg.is_multipart():
         for msg_part in msg.walk():
             try:
@@ -89,6 +111,10 @@ def load_email_by_id(imap_connection, email_id):
         mail_string = add_mail_line(
             mail_string=mail_string,
             line="subject: " + extract_from_header(msg=msg, key="subject"),
+        )
+        mail_string = add_mail_line(
+            mail_string=mail_string,
+            line="date: " + extract_from_header(msg=msg, key="date"),
         )
         mail_string = add_mail_line(mail_string=mail_string, line="-" * 10)
         mail_string = add_mail_line(mail_string=mail_string, line=body)
@@ -122,6 +148,12 @@ def create_env_file():
             f.write("password=mypassword\n")
             f.write("server=imap.my-mail.server\n")
 
+def get_local_mails():
+    mails = []
+    for mail_file in os.listdir('mailbox'):
+        mail_file.split(" - ")[0]
+        mails.append(mail_file.split(" - ")[0])
+    return mails
 
 if __name__ == "__main__":
     main()
