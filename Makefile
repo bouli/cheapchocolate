@@ -4,3 +4,9 @@ version:
 
 start:
 	uv run ./src/cheapchocolate/__init__.py start
+
+build:
+	mkdir -p dist
+	uv sync
+	rm -r dist
+	uv build
