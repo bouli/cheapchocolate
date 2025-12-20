@@ -4,7 +4,7 @@ from cheapchocolate.modules.imap import get_mails, get_folders
 
 def main():
     parser = argparse.ArgumentParser(prog="cheapchocolate")
-    parser.add_argument("--version", action="version", version="%(prog)s v0.2.1")
+    parser.add_argument("--version", action="version", version="%(prog)s v0.3.0")
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
     start_parser = subparsers.add_parser(
