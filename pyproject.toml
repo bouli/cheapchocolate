@@ -1,6 +1,6 @@
 [project]
 name = "cheapchocolate"
-version = "0.3.0"
+version = "0.3.1"
 description = "CheapChocolate is an simple imap client to receive you daily email."
 readme = "README.md"
 authors = [
