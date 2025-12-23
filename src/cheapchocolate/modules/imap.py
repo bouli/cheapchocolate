@@ -34,7 +34,8 @@ def create_env_file():
 
 def get_folders():
     imap_connection=get_imap_connection()
-
+    if imap_connection is None:
+        return
     print("🗣️  Asking for your folders...")
     result, folders_list = imap_connection.list()
 
