@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 
 from cheapchocolate.modules.mailbox import get_local_mails, get_local_mailbox_folder
 
+
 def get_imap_connection():
     load_dotenv()
     if os.getenv("user") is None or os.getenv("user") == "myuser@my-mail.server":
@@ -25,6 +26,7 @@ def get_imap_connection():
         return None
     return imap_connection
 
+
 def create_env_file():
     if not os.path.exists(".env"):
         with open(".env", "+a") as f:
@@ -32,8 +34,9 @@ def create_env_file():
             f.write("password=mypassword\n")
             f.write("server=imap.my-mail.server\n")
 
+
 def get_folders():
-    imap_connection=get_imap_connection()
+    imap_connection = get_imap_connection()
     if imap_connection is None:
         return
     print("🗣️  Asking for your folders...")
@@ -51,18 +54,25 @@ def get_folders():
 
     user_option = -1
     while user_option < 0 or user_option >= len(folders_list):
-        user_option = input("Choose one of the online 🗂️ folders above to receive the emails or `q` to quit: ")
+        user_option = input(
+            "Choose one of the online 🗂️ folders above to receive the emails or `q` to quit: "
+        )
         if user_option == "q":
             return
         elif user_option.isdigit():
             user_option = int(user_option)
             if user_option >= 0 and user_option < len(folders_list):
-                get_mails(mail_folder=_clean_folder_name(folders_list[user_option]), imap_connection=imap_connection)
+                get_mails(
+                    mail_folder=_clean_folder_name(folders_list[user_option]),
+                    imap_connection=imap_connection,
+                )
     return
 
+
 def _clean_folder_name(folder):
-    folder_name = str(folder).split('"/" "')[1].replace("\"'","")
+    folder_name = str(folder).split('"/" "')[1].replace("\"'", "")
     return folder_name
+
 
 def get_mails(mail_folder="inbox", imap_connection=None, local_mails=[]):
 
@@ -83,7 +93,7 @@ def get_mails(mail_folder="inbox", imap_connection=None, local_mails=[]):
     local_mails = get_local_mails()
     mails_to_receive = []
     for remote_mail_id in remote_mails:
-        if str(remote_mail_id).replace("'","") not in local_mails:
+        if str(remote_mail_id).replace("'", "") not in local_mails:
             mails_to_receive.append(remote_mail_id)
 
     if len(mails_to_receive) == 0:
@@ -95,11 +105,14 @@ def get_mails(mail_folder="inbox", imap_connection=None, local_mails=[]):
     print(f"🗃️  You have {len(mails_to_receive)} mails...")
 
     for email_id in mails_to_receive:
-        load_email_by_id(imap_connection=imap_connection, email_id=email_id, mail_folder=mail_folder)
+        load_email_by_id(
+            imap_connection=imap_connection, email_id=email_id, mail_folder=mail_folder
+        )
     imap_connection.close()
     imap_connection.logout()
 
     print("🍫 We are done, let`s have a dessert...")
+
 
 def load_email_by_id(imap_connection, email_id, mail_folder="inbox"):
 
@@ -116,10 +129,10 @@ def load_email_by_id(imap_connection, email_id, mail_folder="inbox"):
         body = msg.get_payload(decode=True).decode()
     email_id = str(email_id).replace("'", "")
     mailbox_folder = get_local_mailbox_folder()
-    subject_file_name = extract_from_header(msg=msg, key="subject").replace("'","").replace("/","")
-    with open(
-        f'{mailbox_folder}/{email_id} - {subject_file_name}.md', "+w"
-    ) as f:
+    subject_file_name = (
+        extract_from_header(msg=msg, key="subject").replace("'", "").replace("/", "")
+    )
+    with open(f"{mailbox_folder}/{email_id} - {subject_file_name}.md", "+w") as f:
         mail_string = ""
         mail_string = add_mail_line(mail_string=mail_string, line="-" * 10)
         mail_string = add_mail_line(
@@ -132,7 +145,7 @@ def load_email_by_id(imap_connection, email_id, mail_folder="inbox"):
         )
         mail_string = add_mail_line(
             mail_string=mail_string,
-            line="subject: \"" + extract_from_header(msg=msg, key="subject") + "\"",
+            line='subject: "' + extract_from_header(msg=msg, key="subject") + '"',
         )
         mail_string = add_mail_line(
             mail_string=mail_string,
@@ -140,7 +153,7 @@ def load_email_by_id(imap_connection, email_id, mail_folder="inbox"):
         )
         mail_string = add_mail_line(
             mail_string=mail_string,
-            line="mail_folder: \"" + mail_folder + "\"",
+            line='mail_folder: "' + mail_folder + '"',
         )
         mail_string = add_mail_line(mail_string=mail_string, line="-" * 10)
         mail_string = add_mail_line(mail_string=mail_string, line=body)

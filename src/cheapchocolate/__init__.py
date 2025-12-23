@@ -1,6 +1,8 @@
 import argparse
 from cheapchocolate.modules.imap import get_mails, get_folders
+
 # import getpass
+
 
 def main():
     parser = argparse.ArgumentParser(prog="cheapchocolate")
@@ -21,13 +23,14 @@ def main():
     )
     args = parser.parse_args()
 
-    if args.command == "start" :
+    if args.command == "start":
         get_mails(args.folder)
 
     if args.command == "folders":
         get_folders()
 
     return
+
 
 if __name__ == "__main__":
     main()
