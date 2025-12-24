@@ -44,8 +44,7 @@ def get_folders():
 
     if len(folders_list) == 0:
         print(f"😅 You have no new folder...")
-        imap_connection.close()
-        imap_connection.logout()
+        close_imap_connection(imap_connection)
         return
     print("These are your folder from your online 📫 mailbox: ")
     for index, folder in enumerate(folders_list):
@@ -98,8 +97,7 @@ def get_mails(mail_folder="inbox", imap_connection=None, local_mails=[]):
 
     if len(mails_to_receive) == 0:
         print(f"📭 You have no new mails...")
-        imap_connection.close()
-        imap_connection.logout()
+        close_imap_connection(imap_connection)
         return
 
     print(f"🗃️  You have {len(mails_to_receive)} mails...")
@@ -108,8 +106,7 @@ def get_mails(mail_folder="inbox", imap_connection=None, local_mails=[]):
         load_email_by_id(
             imap_connection=imap_connection, email_id=email_id, mail_folder=mail_folder
         )
-    imap_connection.close()
-    imap_connection.logout()
+    close_imap_connection(imap_connection)
 
     print("🍫 We are done, let`s have a dessert...")
 
@@ -178,3 +175,10 @@ def extract_from_header(msg, key):
     else:
         value = str(value)
     return value
+
+
+def close_imap_connection(imap_connection: imaplib.IMAP4_SSL):
+
+    imap_connection.close()
+    imap_connection.logout()
+    print(f"👋 Tschüss...")
