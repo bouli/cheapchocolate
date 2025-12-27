@@ -6,6 +6,7 @@ from email.header import decode_header
 from datetime import datetime, timedelta
 
 from cheapchocolate.modules.mailbox import get_local_mails, get_local_mailbox_folder
+from cheapchocolate.core import config
 
 
 def get_imap_connection():
@@ -74,9 +75,9 @@ def _clean_folder_name(folder):
 
 
 def get_mails(mail_folder="inbox", imap_connection=None, local_mails=[]):
-
+    days_to_fetch = int(config.get_mails('days_to_fetch')) * -1
     today = datetime.today().date()
-    time = (today + timedelta(days=0)).strftime("%d-%b-%Y")
+    time = (today + timedelta(days=days_to_fetch)).strftime("%d-%b-%Y")
 
     if imap_connection is None:
         imap_connection = get_imap_connection()

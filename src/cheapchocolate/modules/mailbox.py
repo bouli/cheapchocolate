@@ -1,5 +1,5 @@
 import os
-
+from cheapchocolate.core import config
 
 def get_local_mails():
     mails = []
@@ -10,7 +10,5 @@ def get_local_mails():
 
 
 def get_local_mailbox_folder():
-    mailbox_folder = "mailbox"
-    if not os.path.exists(mailbox_folder):
-        os.mkdir(mailbox_folder)
+    mailbox_folder = config.get_dir("mailbox")
     return mailbox_folder
