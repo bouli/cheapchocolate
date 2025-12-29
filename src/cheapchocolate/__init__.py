@@ -14,7 +14,7 @@ def main():
         help="📨 Get today's emails.",
     )
     start_parser.add_argument(
-        "--folder", default="inbox", help="Choose an specific mailbox folder to check."
+        "--folder", default="mail_folders", help="Choose an specific mailbox folder to check."
     )
 
     folder_parser = subparsers.add_parser(

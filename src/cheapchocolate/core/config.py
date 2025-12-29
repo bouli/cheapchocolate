@@ -46,9 +46,18 @@ def get_param(parent_param, param):
             parent_param=parent_param, param=param, default_app_dir=default_app_dir
         )
 
+def get_mail_folders():
+    mail_folders = get_files(param="mail_folders")
+    return config_files.create_and_read_config_file(
+        file_name=mail_folders,
+        default_app_dir=default_app_dir,
+    )
+
 def overwrite_config_file(data, file_name):
     config_files.overwrite_config_file(data, file_name, default_app_dir=default_app_dir)
 
 
 def _append_config_file(data, file_name):
     config_files.append_config_file(data, file_name, default_app_dir=default_app_dir)
+
+get_mail_folders()

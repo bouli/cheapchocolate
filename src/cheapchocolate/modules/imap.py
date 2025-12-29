@@ -62,7 +62,7 @@ def get_folders():
         elif user_option.isdigit():
             user_option = int(user_option)
             if user_option >= 0 and user_option < len(folders_list):
-                get_mails(
+                _get_mails(
                     mail_folder=_clean_folder_name(folders_list[user_option]),
                     imap_connection=imap_connection,
                 )
@@ -73,9 +73,22 @@ def _clean_folder_name(folder):
     folder_name = str(folder).split('"/" "')[1].replace("\"'", "")
     return folder_name
 
+def get_mails(mail_folder="mail_folders"):
+    if mail_folder!="mail_folders":
+        _get_mails(mail_folder=mail_folder)
+    else:
+        mail_folders = config.get_mail_folders()
+        imap_connection = get_imap_connection()
+        for mail_folder, data in mail_folders.items():
+            _get_mails(mail_folder=mail_folder, days_to_fetch=int(data['days_to_fetch']), imap_connection=imap_connection, let_imap_connection_opened=True)
 
-def get_mails(mail_folder="inbox", imap_connection=None, local_mails=[]):
-    days_to_fetch = int(config.get_mails('days_to_fetch')) * -1
+        close_imap_connection(imap_connection)
+        print("🍫 We are done, let`s have a dessert...")
+
+def _get_mails(mail_folder="inbox", days_to_fetch:int =0 ,imap_connection=None, let_imap_connection_opened=False):
+    if days_to_fetch == 0:
+        days_to_fetch = int(config.get_mails('days_to_fetch')) * -1
+
     today = datetime.today().date()
     time = (today + timedelta(days=days_to_fetch)).strftime("%d-%b-%Y")
 
@@ -97,8 +110,9 @@ def get_mails(mail_folder="inbox", imap_connection=None, local_mails=[]):
             mails_to_receive.append(remote_mail_id)
 
     if len(mails_to_receive) == 0:
-        print(f"📭 You have no new mails...")
-        close_imap_connection(imap_connection)
+        print(f"📭 You have no new mails in {mail_folder}...")
+        if not let_imap_connection_opened:
+            close_imap_connection(imap_connection)
         return
 
     print(f"🗃️  You have {len(mails_to_receive)} mails...")
@@ -107,9 +121,10 @@ def get_mails(mail_folder="inbox", imap_connection=None, local_mails=[]):
         load_email_by_id(
             imap_connection=imap_connection, email_id=email_id, mail_folder=mail_folder
         )
-    close_imap_connection(imap_connection)
 
-    print("🍫 We are done, let`s have a dessert...")
+    if not let_imap_connection_opened:
+        close_imap_connection(imap_connection)
+        print("🍫 We are done, let`s have a dessert...")
 
 
 def load_email_by_id(imap_connection, email_id, mail_folder="inbox"):
