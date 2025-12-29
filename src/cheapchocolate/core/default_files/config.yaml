@@ -1,0 +1,4 @@
+default_dirs:
+  mailbox: ./mailbox
+mails:
+  days_to_fetch: 1
