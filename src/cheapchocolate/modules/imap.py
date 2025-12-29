@@ -62,14 +62,16 @@ def get_folders():
         elif user_option.isdigit():
             user_option = int(user_option)
             if user_option >= 0 and user_option < len(folders_list):
-                mail_folder=_clean_folder_name(folders_list[user_option])
+                mail_folder = _clean_folder_name(folders_list[user_option])
                 _get_mails(
                     mail_folder=mail_folder,
                     imap_connection=imap_connection,
                 )
                 mail_folders = config.get_mail_folders()
                 if mail_folder not in mail_folders.keys():
-                    add_default_folder = input(f"🗃️ Would you like to add `{mail_folder}` to your default `mail_folder`? [Y]es or anything else to No: ")
+                    add_default_folder = input(
+                        f"🗃️ Would you like to add `{mail_folder}` to your default `mail_folder`? [Y]es or anything else to No: "
+                    )
                     if add_default_folder.upper() == "Y":
                         config.add_mail_folder(mail_folder)
                         print(f"🗃️ {mail_folder} added to your default `mail_folder`.")
@@ -84,21 +86,33 @@ def _clean_folder_name(folder):
     folder_name = str(folder).split('"/" "')[1].replace("\"'", "")
     return folder_name
 
+
 def get_mails(mail_folder="mail_folders"):
-    if mail_folder!="mail_folders":
+    if mail_folder != "mail_folders":
         _get_mails(mail_folder=mail_folder)
     else:
         mail_folders = config.get_mail_folders()
         imap_connection = get_imap_connection()
         for mail_folder, data in mail_folders.items():
-            _get_mails(mail_folder=mail_folder, days_to_fetch=int(data['days_to_fetch']), imap_connection=imap_connection, let_imap_connection_opened=True)
+            _get_mails(
+                mail_folder=mail_folder,
+                days_to_fetch=int(data["days_to_fetch"]),
+                imap_connection=imap_connection,
+                let_imap_connection_opened=True,
+            )
 
         close_imap_connection(imap_connection)
         print("🍫 We are done, let`s have a dessert...")
 
-def _get_mails(mail_folder="inbox", days_to_fetch:int =0 ,imap_connection=None, let_imap_connection_opened=False):
+
+def _get_mails(
+    mail_folder="inbox",
+    days_to_fetch: int = 0,
+    imap_connection=None,
+    let_imap_connection_opened=False,
+):
     if days_to_fetch == 0:
-        days_to_fetch = int(config.get_mails('days_to_fetch')) * -1
+        days_to_fetch = int(config.get_mails("days_to_fetch")) * -1
 
     today = datetime.today().date()
     time = (today + timedelta(days=days_to_fetch)).strftime("%d-%b-%Y")

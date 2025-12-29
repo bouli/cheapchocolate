@@ -3,6 +3,7 @@ from cheapchocolate.core import config_files
 
 default_app_dir = "cheapchocolate"
 
+
 def get_dir(param="cheapchocolate"):
     parent_param = "default_dirs"
 
@@ -16,11 +17,13 @@ def get_dir(param="cheapchocolate"):
         os.mkdir(folder)
     return folder
 
+
 def get_mails(param):
-    parent_param = 'mails'
+    parent_param = "mails"
     return config_files.get_param(
-            parent_param=parent_param, param=param, default_app_dir=default_app_dir
-        )
+        parent_param=parent_param, param=param, default_app_dir=default_app_dir
+    )
+
 
 def load_config(force_default=False):
     config_file_name = "config.yaml"
@@ -35,16 +38,19 @@ def load_config(force_default=False):
 
     return config_params
 
+
 def get_files(param):
     parent_param = "default_files"
     return config_files.get_param(
         parent_param=parent_param, param=param, default_app_dir=default_app_dir
     )
 
+
 def get_param(parent_param, param):
     return config_files.get_param(
-            parent_param=parent_param, param=param, default_app_dir=default_app_dir
-        )
+        parent_param=parent_param, param=param, default_app_dir=default_app_dir
+    )
+
 
 def get_mail_folders():
     mail_folders = get_files(param="mail_folders")
@@ -53,10 +59,12 @@ def get_mail_folders():
         default_app_dir=default_app_dir,
     )
 
+
 def add_mail_folder(mail_folder):
     mail_folders = get_files(param="mail_folders")
-    data = {mail_folder : {"days_to_fetch": get_mails("days_to_fetch")}}
+    data = {mail_folder: {"days_to_fetch": get_mails("days_to_fetch")}}
     _append_config_file(data, file_name=mail_folders)
+
 
 def overwrite_config_file(data, file_name):
     config_files.overwrite_config_file(data, file_name, default_app_dir=default_app_dir)
@@ -64,5 +72,6 @@ def overwrite_config_file(data, file_name):
 
 def _append_config_file(data, file_name):
     config_files.append_config_file(data, file_name, default_app_dir=default_app_dir)
+
 
 get_mail_folders()

@@ -6,7 +6,7 @@ from cheapchocolate.modules.imap import get_mails, get_folders
 
 def main():
     parser = argparse.ArgumentParser(prog="cheapchocolate")
-    parser.add_argument("--version", action="version", version="%(prog)s v0.3.1")
+    parser.add_argument("--version", action="version", version="%(prog)s v0.4.0")
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
     start_parser = subparsers.add_parser(
@@ -14,7 +14,9 @@ def main():
         help="📨 Get today's emails.",
     )
     start_parser.add_argument(
-        "--folder", default="mail_folders", help="Choose an specific mailbox folder to check."
+        "--folder",
+        default="mail_folders",
+        help="Choose an specific mailbox folder to check.",
     )
 
     folder_parser = subparsers.add_parser(

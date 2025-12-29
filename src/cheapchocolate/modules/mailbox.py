@@ -1,6 +1,7 @@
 import os
 from cheapchocolate.core import config
 
+
 def get_local_mails():
     mails = []
     for mail_file in os.listdir(get_local_mailbox_folder()):
