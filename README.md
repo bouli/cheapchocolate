@@ -1,4 +1,4 @@
-# 🍫 cheapchocolate v0.3.1
+# 🍫 cheapchocolate v0.4.0
 
 CheapChocolate is an simple imap client to receive you daily email.
 
