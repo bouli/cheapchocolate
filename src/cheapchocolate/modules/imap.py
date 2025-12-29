@@ -62,10 +62,21 @@ def get_folders():
         elif user_option.isdigit():
             user_option = int(user_option)
             if user_option >= 0 and user_option < len(folders_list):
+                mail_folder=_clean_folder_name(folders_list[user_option])
                 _get_mails(
-                    mail_folder=_clean_folder_name(folders_list[user_option]),
+                    mail_folder=mail_folder,
                     imap_connection=imap_connection,
                 )
+                mail_folders = config.get_mail_folders()
+                if mail_folder not in mail_folders.keys():
+                    add_default_folder = input(f"🗃️ Would you like to add `{mail_folder}` to your default `mail_folder`? [Y]es or anything else to No: ")
+                    if add_default_folder.upper() == "Y":
+                        config.add_mail_folder(mail_folder)
+                        print(f"🗃️ {mail_folder} added to your default `mail_folder`.")
+            else:
+                user_option = -1
+        else:
+            user_option = -1
     return
 
 

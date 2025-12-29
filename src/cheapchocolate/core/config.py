@@ -53,6 +53,11 @@ def get_mail_folders():
         default_app_dir=default_app_dir,
     )
 
+def add_mail_folder(mail_folder):
+    mail_folders = get_files(param="mail_folders")
+    data = {mail_folder : {"days_to_fetch": get_mails("days_to_fetch")}}
+    _append_config_file(data, file_name=mail_folders)
+
 def overwrite_config_file(data, file_name):
     config_files.overwrite_config_file(data, file_name, default_app_dir=default_app_dir)
 
