@@ -72,6 +72,3 @@ def overwrite_config_file(data, file_name):
 
 def _append_config_file(data, file_name):
     config_files.append_config_file(data, file_name, default_app_dir=default_app_dir)
-
-
-get_mail_folders()
