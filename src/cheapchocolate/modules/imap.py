@@ -112,7 +112,9 @@ def _get_mails(
     let_imap_connection_opened=False,
 ):
     if days_to_fetch == 0:
-        days_to_fetch = int(config.get_mails("days_to_fetch")) * -1
+        days_to_fetch = int(config.get_mails("days_to_fetch"))
+
+    days_to_fetch = days_to_fetch * -1
 
     today = datetime.today().date()
     time = (today + timedelta(days=days_to_fetch)).strftime("%d-%b-%Y")
@@ -124,7 +126,7 @@ def _get_mails(
 
     imap_connection.select(mail_folder)
 
-    print(f"🗣️  Asking for the today`s mail in {mail_folder}...")
+    print(f"🗣️  Asking for the today`s mail in {mail_folder} (since {time})...")
     result, data = imap_connection.search(None, f"SINCE {time}")
     remote_mails = data[0].split()
 
