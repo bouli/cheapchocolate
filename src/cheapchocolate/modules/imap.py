@@ -168,12 +168,17 @@ def load_email_by_id(imap_connection, email_id, mail_folder="inbox"):
         extract_from_header(msg=msg, key="subject").replace("'", "").replace("/", "")
     )
 
-    if os.path.exists(f"{mailbox_folder}/{email_id} - {subject_file_name} [{mail_folder}].md"):
+    if os.path.exists(
+        f"{mailbox_folder}/{email_id} - {subject_file_name} [{mail_folder}].md"
+    ):
         print(
             f'📜 {email_id} - {extract_from_header(msg=msg, key="subject")} previously downloaded...'
         )
     else:
-        with open(f"{mailbox_folder}/{email_id} - {subject_file_name} [{mail_folder}].md", "+w") as f:
+        with open(
+            f"{mailbox_folder}/{email_id} - {subject_file_name} [{mail_folder}].md",
+            "+w",
+        ) as f:
             mail_string = ""
             mail_string = add_mail_line(mail_string=mail_string, line="-" * 10)
             mail_string = add_mail_line(
@@ -205,24 +210,31 @@ def load_email_by_id(imap_connection, email_id, mail_folder="inbox"):
             )
             return True
 
+
 def imaptime2datetime(imap_time):
     months = {
-        "Jan":"01",
-        "Feb":"02",
-        "Mar":"03",
-        "Apr":"04",
-        "May":"05",
-        "Jun":"06",
-        "Jul":"07",
-        "Aug":"08",
-        "Sep":"09",
-        "Oct":"10",
-        "Nov":"11",
-        "Dec":"12",
+        "Jan": "01",
+        "Feb": "02",
+        "Mar": "03",
+        "Apr": "04",
+        "May": "05",
+        "Jun": "06",
+        "Jul": "07",
+        "Aug": "08",
+        "Sep": "09",
+        "Oct": "10",
+        "Nov": "11",
+        "Dec": "12",
     }
     imap_time = "Mon, 12 Jan 2026 11:58:00 +0000 (UTC)"
     imap_time = imap_time.split(",")[1].strip().split(" ")
-    return imap_time[2]+months[imap_time[1]]+imap_time[0]+imap_time[3].replace(":","")
+    return (
+        imap_time[2]
+        + months[imap_time[1]]
+        + imap_time[0]
+        + imap_time[3].replace(":", "")
+    )
+
 
 def add_mail_line(line, mail_string, verbose=False):
     mail_string = mail_string + "\n" + line
