@@ -57,6 +57,7 @@ def get_mail_folders():
     return config_files.create_and_read_config_file(
         file_name=mail_folders,
         default_app_dir=default_app_dir,
+        complete_file=False,
     )
 
 
