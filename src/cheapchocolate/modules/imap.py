@@ -128,13 +128,7 @@ def _get_mails(
 
     print(f"🗣️  Asking for the today`s mail in {mail_folder} (since {time})...")
     result, data = imap_connection.search(None, f"SINCE {time}")
-    remote_mails = data[0].split()
-
-    local_mails = get_local_mails()
-    mails_to_receive = []
-    for remote_mail_id in remote_mails:
-        if str(remote_mail_id).replace("'", "") not in local_mails:
-            mails_to_receive.append(remote_mail_id)
+    mails_to_receive = data[0].split()
 
     if len(mails_to_receive) == 0:
         print(f"📭 You have no new mails in {mail_folder}...")
@@ -142,7 +136,7 @@ def _get_mails(
             close_imap_connection(imap_connection)
         return
 
-    print(f"🗃️  You have {len(mails_to_receive)} mails...")
+    print(f"🗃️  You have {len(mails_to_receive)} mails to sync...")
 
     for email_id in mails_to_receive:
         load_email_by_id(
@@ -157,6 +151,7 @@ def _get_mails(
 def load_email_by_id(imap_connection, email_id, mail_folder="inbox"):
 
     result, msg_data = imap_connection.fetch(email_id, "(RFC822)")
+
     msg = email.message_from_bytes(msg_data[0][1])
 
     if msg.is_multipart():
@@ -167,42 +162,67 @@ def load_email_by_id(imap_connection, email_id, mail_folder="inbox"):
                 pass
     else:
         body = msg.get_payload(decode=True).decode()
-    email_id = str(email_id).replace("'", "")
+    email_id = imaptime2datetime(extract_from_header(msg=msg, key="date"))
     mailbox_folder = get_local_mailbox_folder()
     subject_file_name = (
         extract_from_header(msg=msg, key="subject").replace("'", "").replace("/", "")
     )
-    with open(f"{mailbox_folder}/{email_id} - {subject_file_name}.md", "+w") as f:
-        mail_string = ""
-        mail_string = add_mail_line(mail_string=mail_string, line="-" * 10)
-        mail_string = add_mail_line(
-            mail_string=mail_string,
-            line="from: " + extract_from_header(msg=msg, key="from"),
-        )
-        mail_string = add_mail_line(
-            mail_string=mail_string,
-            line="to: " + extract_from_header(msg=msg, key="to"),
-        )
-        mail_string = add_mail_line(
-            mail_string=mail_string,
-            line='subject: "' + extract_from_header(msg=msg, key="subject") + '"',
-        )
-        mail_string = add_mail_line(
-            mail_string=mail_string,
-            line="date: " + extract_from_header(msg=msg, key="date"),
-        )
-        mail_string = add_mail_line(
-            mail_string=mail_string,
-            line='mail_folder: "' + mail_folder + '"',
-        )
-        mail_string = add_mail_line(mail_string=mail_string, line="-" * 10)
-        mail_string = add_mail_line(mail_string=mail_string, line=body)
-        mail_string = add_mail_line(mail_string=mail_string, line="-" * 10)
-        f.write(mail_string)
-        print(
-            f'📨 {email_id} - {extract_from_header(msg=msg, key="subject")} received...'
-        )
 
+    if os.path.exists(f"{mailbox_folder}/{email_id} - {subject_file_name} [{mail_folder}].md"):
+        print(
+            f'📜 {email_id} - {extract_from_header(msg=msg, key="subject")} previously downloaded...'
+        )
+    else:
+        with open(f"{mailbox_folder}/{email_id} - {subject_file_name} [{mail_folder}].md", "+w") as f:
+            mail_string = ""
+            mail_string = add_mail_line(mail_string=mail_string, line="-" * 10)
+            mail_string = add_mail_line(
+                mail_string=mail_string,
+                line="from: " + extract_from_header(msg=msg, key="from"),
+            )
+            mail_string = add_mail_line(
+                mail_string=mail_string,
+                line="to: " + extract_from_header(msg=msg, key="to"),
+            )
+            mail_string = add_mail_line(
+                mail_string=mail_string,
+                line='subject: "' + extract_from_header(msg=msg, key="subject") + '"',
+            )
+            mail_string = add_mail_line(
+                mail_string=mail_string,
+                line="date: " + extract_from_header(msg=msg, key="date"),
+            )
+            mail_string = add_mail_line(
+                mail_string=mail_string,
+                line='mail_folder: "' + mail_folder + '"',
+            )
+            mail_string = add_mail_line(mail_string=mail_string, line="-" * 10)
+            mail_string = add_mail_line(mail_string=mail_string, line=body)
+            mail_string = add_mail_line(mail_string=mail_string, line="-" * 10)
+            f.write(mail_string)
+            print(
+                f'📨 {email_id} - {extract_from_header(msg=msg, key="subject")} received...'
+            )
+            return True
+
+def imaptime2datetime(imap_time):
+    months = {
+        "Jan":"01",
+        "Feb":"02",
+        "Mar":"03",
+        "Apr":"04",
+        "May":"05",
+        "Jun":"06",
+        "Jul":"07",
+        "Aug":"08",
+        "Sep":"09",
+        "Oct":"10",
+        "Nov":"11",
+        "Dec":"12",
+    }
+    imap_time = "Mon, 12 Jan 2026 11:58:00 +0000 (UTC)"
+    imap_time = imap_time.split(",")[1].strip().split(" ")
+    return imap_time[2]+months[imap_time[1]]+imap_time[0]+imap_time[3].replace(":","")
 
 def add_mail_line(line, mail_string, verbose=False):
     mail_string = mail_string + "\n" + line
