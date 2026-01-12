@@ -226,7 +226,6 @@ def imaptime2datetime(imap_time):
         "Nov": "11",
         "Dec": "12",
     }
-    imap_time = "Mon, 12 Jan 2026 11:58:00 +0000 (UTC)"
     imap_time = imap_time.split(",")[1].strip().split(" ")
     return (
         imap_time[2]
