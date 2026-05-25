@@ -93,6 +93,9 @@ def get_mails(mail_folder="mail_folders"):
     else:
         mail_folders = config.get_mail_folders()
         imap_connection = get_imap_connection()
+        if imap_connection is None:
+            return False
+
         for mail_folder, data in mail_folders.items():
             _get_mails(
                 mail_folder=mail_folder,
