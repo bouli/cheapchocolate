@@ -1,4 +1,5 @@
 import email
+import getpass
 import imaplib
 import os
 from datetime import datetime, timedelta
@@ -26,12 +27,20 @@ def get_imap_connection():
     try:
         print("☎️  Calling your imap server...")
         imap_connection = imaplib.IMAP4_SSL(os.getenv("server"))
-        imap_connection.login(os.getenv("user"), os.getenv("password"))
+        imap_connection.login(os.getenv("user"), get_imap_password())
         print("🙌 It worked!")
     except:
         print("😅 Oops! We cannot login, can you please check your `/.env` file?")
         return None
     return imap_connection
+
+
+def get_imap_password():
+    password = os.getenv("password")
+    if password:
+        return password
+
+    return getpass.getpass(f"IMAP password for {os.getenv("user")}, please: ")
 
 
 def create_env_file():

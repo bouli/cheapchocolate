@@ -53,6 +53,28 @@ class ImapConnectionTests(unittest.TestCase):
             )
             self.assertIs(connection, imap_ssl.return_value)
 
+    def test_get_imap_connection_prompts_when_password_is_missing(self):
+        with temporary_cwd():
+            Path(".env").write_text(
+                "user=test@example.com\n"
+                "server=imap.example.com\n"
+            )
+
+            with (
+                patch.dict(os.environ, {}, clear=True),
+                patch("cheapchocolate.modules.imap.getpass.getpass") as getpass,
+                patch("cheapchocolate.modules.imap.imaplib.IMAP4_SSL") as imap_ssl,
+            ):
+                getpass.return_value = "prompted-secret"
+
+                connection = imap.get_imap_connection()
+
+            getpass.assert_called_once_with("IMAP password: ")
+            imap_ssl.return_value.login.assert_called_once_with(
+                "test@example.com", "prompted-secret"
+            )
+            self.assertIs(connection, imap_ssl.return_value)
+
     def test_get_imap_connection_creates_template_when_user_is_missing(self):
         with temporary_cwd() as tmp_dir:
             with (
