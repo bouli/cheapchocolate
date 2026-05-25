@@ -3,6 +3,7 @@ import imaplib
 import os
 from datetime import datetime, timedelta
 from email.header import decode_header
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -10,12 +11,16 @@ from cheapchocolate.core import config
 from cheapchocolate.modules.mailbox import get_local_mailbox_folder, get_local_mails
 
 
+def get_env_file_path():
+    return Path.cwd() / ".env"
+
+
 def get_imap_connection():
-    load_dotenv()
+    load_dotenv(dotenv_path=get_env_file_path())
     if os.getenv("user") is None or os.getenv("user") == "myuser@my-mail.server":
         create_env_file()
         print(
-            "🫠 Appearently you did't set up your `/.env` file to connect to your email service."
+            "🫠 Appearently you did't set up your `.env` file to connect to your email service."
         )
         return None
     try:
@@ -30,8 +35,9 @@ def get_imap_connection():
 
 
 def create_env_file():
-    if not os.path.exists(".env"):
-        with open(".env", "+a") as f:
+    env_file_path = get_env_file_path()
+    if not env_file_path.exists():
+        with env_file_path.open("+a") as f:
             f.write("user=myuser@my-mail.server\n")
             f.write("password=mypassword\n")
             f.write("server=imap.my-mail.server\n")
