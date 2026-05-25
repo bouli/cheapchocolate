@@ -1,5 +1,6 @@
 # CHANGELOG
 
-* a8ea6d9 fix: Fix error when there is not a valid `.env` file (Cesar Cardoso)
-* dadeedf chore(make): Update Makefile with more features (Cesar Cardoso)
-* 626a26c chore(pyproject): Update bumper to create CHANGELOG (Cesar Cardoso)
+* 14f3377 feat(password): Make password optional from the `.env` file (Cesar Cardoso)
+* e1f2a68 tests(imap): Add tests to the module `imap` (Cesar Cardoso)
+* 3037cac tests(mailbox): Add tests to the module `mailbox` (Cesar Cardoso)
+* e189476 fix(imap): Fix usage as cli as modules from `uvx` (Cesar Cardoso)
