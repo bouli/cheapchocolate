@@ -45,4 +45,7 @@ replace = 'v{new_version}..HEAD'
 filename = "README.md"
 
 [[tool.bumpversion.files]]
+filename = "Makefile"
+
+[[tool.bumpversion.files]]
 filename = "src/cheapchocolate/__init__.py"
