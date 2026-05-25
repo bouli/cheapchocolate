@@ -1,4 +1,5 @@
 import os
+
 from cheapchocolate.core import config_files
 
 default_app_dir = "cheapchocolate"

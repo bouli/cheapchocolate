@@ -1,12 +1,13 @@
-import os
-import imaplib
-from dotenv import load_dotenv
 import email
-from email.header import decode_header
+import imaplib
+import os
 from datetime import datetime, timedelta
+from email.header import decode_header
 
-from cheapchocolate.modules.mailbox import get_local_mails, get_local_mailbox_folder
+from dotenv import load_dotenv
+
 from cheapchocolate.core import config
+from cheapchocolate.modules.mailbox import get_local_mailbox_folder, get_local_mails
 
 
 def get_imap_connection():

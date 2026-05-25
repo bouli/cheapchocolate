@@ -1,6 +1,6 @@
 [project]
 name = "cheapchocolate"
-version = "0.5.1"
+version = "0.5.2"
 license = "MIT"
 description = "CheapChocolate is an simple imap client to receive you daily email."
 readme = "README.md"
@@ -28,7 +28,7 @@ build-backend = "uv_build"
 [tool.bumpversion]
 tag = true
 tag_name = "v{new_version}"
-pre_commit_hooks = ["printf \"# CHANGELOG\n\n\" > CHANGELOG.md && git log v0.5.1..HEAD --format=\"* %h %s (%an)\" >> CHANGELOG.md", "git add CHANGELOG.md", "uvx isort ./src", "uvx black ./src", "git add src","uv sync --upgrade", "git add uv.lock"]
+pre_commit_hooks = ["printf \"# CHANGELOG\n\n\" > CHANGELOG.md && git log v0.5.2..HEAD --format=\"* %h %s (%an)\" >> CHANGELOG.md", "git add CHANGELOG.md", "uvx isort ./src", "uvx black ./src", "git add src","uv sync --upgrade", "git add uv.lock"]
 commit = true
 
 [[tool.bumpversion.files]]
