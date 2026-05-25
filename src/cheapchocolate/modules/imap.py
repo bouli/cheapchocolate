@@ -40,7 +40,7 @@ def get_imap_password():
     if password:
         return password
 
-    return getpass.getpass(f"IMAP password for {os.getenv("user")}, please: ")
+    return getpass.getpass(f"IMAP password: ")
 
 
 def create_env_file():
