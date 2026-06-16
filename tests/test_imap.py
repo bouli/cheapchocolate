@@ -20,6 +20,16 @@ def temporary_cwd():
             os.chdir(previous_cwd)
 
 
+def build_message(subject="Interactive Folder"):
+    message = EmailMessage()
+    message["from"] = "sender@example.com"
+    message["to"] = "receiver@example.com"
+    message["subject"] = subject
+    message["date"] = "Mon, 01 Jan 2024 12:34:56 +0000"
+    message.set_content("Body")
+    return message
+
+
 class ImapConnectionTests(unittest.TestCase):
 
     def test_create_env_file_writes_template_to_current_working_directory(self):
@@ -447,6 +457,129 @@ class MessageParsingTests(unittest.TestCase):
 
         connection.fetch.assert_called_once_with(b"1", imap.DUPLICATE_CHECK_FETCH)
         connection.store.assert_not_called()
+
+
+class InteractiveFolderTests(unittest.TestCase):
+    def test_get_folders_preserves_remote_read_state_by_default(self):
+        message = build_message()
+        connection = Mock()
+        connection.list.return_value = (
+            "OK",
+            [b'(\\HasNoChildren) "/" "INBOX"'],
+        )
+        connection.search.return_value = ("OK", [b"1"])
+        connection.fetch.side_effect = [
+            ("OK", [(b"1", message.as_bytes())]),
+            ("OK", [(b"1", message.as_bytes())]),
+        ]
+
+        with tempfile.TemporaryDirectory() as mailbox_folder:
+            with (
+                patch(
+                    "cheapchocolate.modules.imap.get_imap_connection",
+                    return_value=connection,
+                ),
+                patch("cheapchocolate.modules.imap.config.get_mails", return_value="1"),
+                patch(
+                    "cheapchocolate.modules.imap.config.get_remote_read_state",
+                    return_value="preserve",
+                ),
+                patch(
+                    "cheapchocolate.modules.imap.config.get_mail_folders",
+                    return_value={"INBOX": {"days_to_fetch": 1}},
+                ),
+                patch(
+                    "cheapchocolate.modules.imap.get_local_mailbox_folder",
+                    return_value=mailbox_folder,
+                ),
+                patch("builtins.input", return_value="0"),
+            ):
+                imap.get_folders()
+
+        connection.list.assert_called_once_with()
+        connection.select.assert_called_once_with("INBOX")
+        connection.fetch.assert_has_calls(
+            [
+                call(b"1", imap.DUPLICATE_CHECK_FETCH),
+                call(b"1", imap.NON_MUTATING_MESSAGE_FETCH),
+            ]
+        )
+        connection.store.assert_not_called()
+
+    def test_get_folders_honors_configured_mark_read_mode(self):
+        message = build_message("Interactive Mark Read")
+        connection = Mock()
+        connection.list.return_value = (
+            "OK",
+            [b'(\\HasNoChildren) "/" "Archive"'],
+        )
+        connection.search.return_value = ("OK", [b"1"])
+        connection.fetch.side_effect = [
+            ("OK", [(b"1", message.as_bytes())]),
+            ("OK", [(b"1", message.as_bytes())]),
+        ]
+
+        with tempfile.TemporaryDirectory() as mailbox_folder:
+            with (
+                patch(
+                    "cheapchocolate.modules.imap.get_imap_connection",
+                    return_value=connection,
+                ),
+                patch("cheapchocolate.modules.imap.config.get_mails", return_value="1"),
+                patch(
+                    "cheapchocolate.modules.imap.config.get_remote_read_state",
+                    return_value="mark_read",
+                ),
+                patch(
+                    "cheapchocolate.modules.imap.config.get_mail_folders",
+                    return_value={"Archive": {"days_to_fetch": 1}},
+                ),
+                patch(
+                    "cheapchocolate.modules.imap.get_local_mailbox_folder",
+                    return_value=mailbox_folder,
+                ),
+                patch("builtins.input", return_value="0"),
+            ):
+                imap.get_folders()
+
+        connection.fetch.assert_has_calls(
+            [
+                call(b"1", imap.DUPLICATE_CHECK_FETCH),
+                call(b"1", imap.MUTATING_MESSAGE_FETCH),
+            ]
+        )
+        connection.store.assert_not_called()
+
+    def test_get_folders_can_add_selected_folder_to_defaults(self):
+        connection = Mock()
+        connection.list.return_value = (
+            "OK",
+            [b'(\\HasNoChildren) "/" "Archive"'],
+        )
+        connection.search.return_value = ("OK", [b""])
+
+        with (
+            patch(
+                "cheapchocolate.modules.imap.get_imap_connection",
+                return_value=connection,
+            ),
+            patch("cheapchocolate.modules.imap.config.get_mails", return_value="1"),
+            patch(
+                "cheapchocolate.modules.imap.config.get_remote_read_state",
+                return_value="preserve",
+            ),
+            patch(
+                "cheapchocolate.modules.imap.config.get_mail_folders",
+                return_value={"INBOX": {"days_to_fetch": 1}},
+            ),
+            patch("cheapchocolate.modules.imap.config.add_mail_folder") as add_folder,
+            patch("builtins.input", side_effect=["0", "Y"]),
+        ):
+            imap.get_folders()
+
+        connection.list.assert_called_once_with()
+        connection.select.assert_called_once_with("Archive")
+        add_folder.assert_called_once_with("Archive")
 
 
 if __name__ == "__main__":

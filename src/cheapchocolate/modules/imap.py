@@ -86,6 +86,7 @@ def get_folders():
                 _get_mails(
                     mail_folder=mail_folder,
                     imap_connection=imap_connection,
+                    remote_read_state=config.get_remote_read_state(),
                 )
                 mail_folders = config.get_mail_folders()
                 if mail_folder not in mail_folders.keys():
