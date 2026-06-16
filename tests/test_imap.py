@@ -1,5 +1,7 @@
 from email.message import EmailMessage
 
+import pytest
+
 from cheapchocolate.modules import imap
 
 
@@ -112,7 +114,8 @@ def test_load_email_by_id_can_mark_remote_read_when_configured(tmp_path, monkeyp
     )
 
     assert result is True
-    assert connection.fetch_calls == [(b"1", "(RFC822)")]
+    assert connection.fetch_calls == [(b"1", "(BODY.PEEK[])")]
+    assert connection.store_calls == [(b"1", "+FLAGS", "\\Seen")]
 
 
 def test_load_email_by_id_uses_configured_remote_read_status(tmp_path, monkeypatch):
@@ -126,7 +129,8 @@ def test_load_email_by_id_uses_configured_remote_read_status(tmp_path, monkeypat
         mail_folder="inbox",
     )
 
-    assert connection.fetch_calls == [(b"1", "(RFC822)")]
+    assert connection.fetch_calls == [(b"1", "(BODY.PEEK[])")]
+    assert connection.store_calls == [(b"1", "+FLAGS", "\\Seen")]
 
 
 def test_load_email_by_id_rejects_invalid_remote_read_status():
@@ -164,6 +168,50 @@ def test_load_email_by_id_skips_existing_local_message(tmp_path, monkeypatch):
     assert connection.fetch_calls == [(b"1", "(BODY.PEEK[])")]
     assert connection.store_calls == []
     assert existing_file.read_text() == "already downloaded"
+
+
+def test_load_email_by_id_skips_existing_local_message_without_marking_read(
+    tmp_path, monkeypatch
+):
+    connection = FakeImapConnection(raw_message=build_message())
+    monkeypatch.setattr(imap, "get_local_mailbox_folder", lambda: str(tmp_path))
+    existing_file = tmp_path / "20260114093000 - Dailyreports [inbox].md"
+    existing_file.write_text("already downloaded")
+
+    result = imap.load_email_by_id(
+        imap_connection=connection,
+        email_id=b"1",
+        mail_folder="inbox",
+        remote_read_status="mark_read",
+    )
+
+    assert result is None
+    assert connection.fetch_calls == [(b"1", "(BODY.PEEK[])")]
+    assert connection.store_calls == []
+    assert existing_file.read_text() == "already downloaded"
+
+
+def test_load_email_by_id_does_not_mark_read_when_local_write_fails(
+    tmp_path, monkeypatch
+):
+    connection = FakeImapConnection(raw_message=build_message())
+
+    def raise_write_error(*args, **kwargs):
+        raise OSError("cannot write")
+
+    monkeypatch.setattr(imap, "get_local_mailbox_folder", lambda: str(tmp_path))
+    monkeypatch.setattr(imap, "open", raise_write_error, raising=False)
+
+    with pytest.raises(OSError, match="cannot write"):
+        imap.load_email_by_id(
+            imap_connection=connection,
+            email_id=b"1",
+            mail_folder="inbox",
+            remote_read_status="mark_read",
+        )
+
+    assert connection.fetch_calls == [(b"1", "(BODY.PEEK[])")]
+    assert connection.store_calls == []
 
 
 def test_get_mails_selects_folder_loads_each_message_and_closes_connection(monkeypatch):

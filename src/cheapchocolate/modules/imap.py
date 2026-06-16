@@ -159,6 +159,7 @@ def load_email_by_id(
     imap_connection, email_id, mail_folder="inbox", remote_read_status=None
 ):
 
+    remote_email_id = email_id
     if remote_read_status is None:
         remote_read_status = config.get_remote_read_status()
 
@@ -219,6 +220,8 @@ def load_email_by_id(
             mail_string = add_mail_line(mail_string=mail_string, line=body)
             mail_string = add_mail_line(mail_string=mail_string, line="-" * 10)
             f.write(mail_string)
+            if remote_read_status == config.remote_read_status_mark_read:
+                imap_connection.store(remote_email_id, "+FLAGS", "\\Seen")
             print(
                 f'📨 {email_id} - {extract_from_header(msg=msg, key="subject")} received...'
             )
@@ -229,7 +232,7 @@ def _get_fetch_query(remote_read_status):
     if remote_read_status == config.remote_read_status_preserve:
         return "(BODY.PEEK[])"
     if remote_read_status == config.remote_read_status_mark_read:
-        return "(RFC822)"
+        return "(BODY.PEEK[])"
     raise ValueError(
         f"remote_read_status must be one of {sorted(config.remote_read_status_options)}."
     )
