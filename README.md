@@ -29,6 +29,32 @@ cheapchocolate start
 ```
 > You can run `cheapchocolate start`, and it will create the file for you.
 
+By default, CheapChocolate preserves the remote read/unread status of your emails.
+Unread messages stay unread on the IMAP server after they are received locally.
+
+To receive a specific folder:
+```shell
+cheapchocolate start --folder inbox
+```
+
+To override the remote read status behavior for one run:
+```shell
+cheapchocolate start --remote-read-status preserve
+cheapchocolate start --remote-read-status mark_read
+```
+
+`preserve` keeps the remote status unchanged. `mark_read` marks a message as read on
+the remote mailbox after CheapChocolate writes the local copy.
+
+To make `mark_read` the default behavior, update your `cheapchocolate/config.yaml`:
+```yaml
+mails:
+  days_to_fetch: 1
+  remote_read_status: mark_read
+```
+
+Use `remote_read_status: preserve` to return to the safe default.
+
 ## See Also
 
 - Github: https://github.com/bouli/cheapchocolate
