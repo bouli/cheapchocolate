@@ -47,6 +47,7 @@ def get_folders():
         print(f"😅 You have no new folder...")
         close_imap_connection(imap_connection)
         return
+    remote_read_status = config.get_remote_read_status()
     print("These are your folder from your online 📫 mailbox: ")
     for index, folder in enumerate(folders_list):
         folder_name = _clean_folder_name(folder)
@@ -66,6 +67,7 @@ def get_folders():
                 _get_mails(
                     mail_folder=mail_folder,
                     imap_connection=imap_connection,
+                    remote_read_status=remote_read_status,
                 )
                 mail_folders = config.get_mail_folders()
                 if mail_folder not in mail_folders.keys():

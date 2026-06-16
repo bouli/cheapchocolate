@@ -6,15 +6,21 @@ from cheapchocolate.modules import imap
 
 
 class FakeImapConnection:
-    def __init__(self, raw_message=b"", search_result=b""):
+    def __init__(self, raw_message=b"", search_result=b"", folders=None):
         self.raw_message = raw_message
         self.search_result = search_result
+        self.folders = folders or []
         self.fetch_calls = []
         self.store_calls = []
         self.selected_folders = []
         self.search_calls = []
+        self.list_calls = 0
         self.closed = False
         self.logged_out = False
+
+    def list(self):
+        self.list_calls += 1
+        return "OK", self.folders
 
     def fetch(self, email_id, query):
         self.fetch_calls.append((email_id, query))
@@ -313,3 +319,64 @@ def test_get_mails_keeps_shared_connection_open_when_requested(monkeypatch):
     assert connection.selected_folders == ["archive"]
     assert connection.closed is False
     assert connection.logged_out is False
+
+
+def test_get_folders_syncs_selected_folder_with_preserve_mode_and_adds_default(
+    monkeypatch, capsys
+):
+    connection = FakeImapConnection(folders=[b'(\\HasNoChildren) "/" "INBOX"'])
+    inputs = iter(["0", "Y"])
+    synced_folders = []
+    added_folders = []
+
+    monkeypatch.setattr(imap, "get_imap_connection", lambda: connection)
+    monkeypatch.setattr("builtins.input", lambda prompt: next(inputs))
+    monkeypatch.setattr(imap.config, "get_remote_read_status", lambda: "preserve")
+    monkeypatch.setattr(imap.config, "get_mail_folders", lambda: {})
+    monkeypatch.setattr(imap.config, "add_mail_folder", added_folders.append)
+    monkeypatch.setattr(
+        imap,
+        "_get_mails",
+        lambda mail_folder, imap_connection, remote_read_status: synced_folders.append(
+            (mail_folder, imap_connection, remote_read_status)
+        ),
+    )
+
+    imap.get_folders()
+
+    output = capsys.readouterr().out
+    assert "[0] INBOX" in output
+    assert connection.list_calls == 1
+    assert synced_folders == [("INBOX", connection, "preserve")]
+    assert added_folders == ["INBOX"]
+
+
+def test_get_folders_syncs_selected_folder_with_mark_read_mode_without_readding(
+    monkeypatch,
+):
+    connection = FakeImapConnection(folders=[b'(\\HasNoChildren) "/" "INBOX"'])
+    inputs = iter(["0"])
+    synced_folders = []
+    added_folders = []
+
+    monkeypatch.setattr(imap, "get_imap_connection", lambda: connection)
+    monkeypatch.setattr("builtins.input", lambda prompt: next(inputs))
+    monkeypatch.setattr(imap.config, "get_remote_read_status", lambda: "mark_read")
+    monkeypatch.setattr(
+        imap.config,
+        "get_mail_folders",
+        lambda: {"INBOX": {"days_to_fetch": 1}},
+    )
+    monkeypatch.setattr(imap.config, "add_mail_folder", added_folders.append)
+    monkeypatch.setattr(
+        imap,
+        "_get_mails",
+        lambda mail_folder, imap_connection, remote_read_status: synced_folders.append(
+            (mail_folder, imap_connection, remote_read_status)
+        ),
+    )
+
+    imap.get_folders()
+
+    assert synced_folders == [("INBOX", connection, "mark_read")]
+    assert added_folders == []
