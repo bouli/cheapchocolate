@@ -1,4 +1,4 @@
-
+.PHONY: tests build
 version:
 	uv run ./src/cheapchocolate/__init__.py --version
 
@@ -13,3 +13,6 @@ build:
 	uv sync
 	rm -r dist
 	uv build
+
+tests:
+	uv run pytest
