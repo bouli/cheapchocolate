@@ -2,6 +2,12 @@ import os
 from cheapchocolate.core import config_files
 
 default_app_dir = "cheapchocolate"
+remote_read_status_preserve = "preserve"
+remote_read_status_mark_read = "mark_read"
+remote_read_status_options = {
+    remote_read_status_preserve,
+    remote_read_status_mark_read,
+}
 
 
 def get_dir(param="cheapchocolate"):
@@ -23,6 +29,19 @@ def get_mails(param):
     return config_files.get_param(
         parent_param=parent_param, param=param, default_app_dir=default_app_dir
     )
+
+
+def get_remote_read_status():
+    try:
+        remote_read_status = get_mails("remote_read_status")
+    except Exception:
+        return remote_read_status_preserve
+
+    if remote_read_status not in remote_read_status_options:
+        raise ValueError(
+            f"remote_read_status must be one of {sorted(remote_read_status_options)}."
+        )
+    return remote_read_status
 
 
 def load_config(force_default=False):

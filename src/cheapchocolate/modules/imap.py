@@ -110,9 +110,12 @@ def _get_mails(
     days_to_fetch: int = 0,
     imap_connection=None,
     let_imap_connection_opened=False,
+    remote_read_status=None,
 ):
     if days_to_fetch == 0:
         days_to_fetch = int(config.get_mails("days_to_fetch"))
+    if remote_read_status is None:
+        remote_read_status = config.get_remote_read_status()
 
     days_to_fetch = days_to_fetch * -1
 
@@ -140,7 +143,10 @@ def _get_mails(
 
     for email_id in mails_to_receive:
         load_email_by_id(
-            imap_connection=imap_connection, email_id=email_id, mail_folder=mail_folder
+            imap_connection=imap_connection,
+            email_id=email_id,
+            mail_folder=mail_folder,
+            remote_read_status=remote_read_status,
         )
 
     if not let_imap_connection_opened:
@@ -148,9 +154,16 @@ def _get_mails(
         print("🍫 We are done, let`s have a dessert...")
 
 
-def load_email_by_id(imap_connection, email_id, mail_folder="inbox"):
+def load_email_by_id(
+    imap_connection, email_id, mail_folder="inbox", remote_read_status=None
+):
 
-    result, msg_data = imap_connection.fetch(email_id, "(BODY.PEEK[])")
+    if remote_read_status is None:
+        remote_read_status = config.get_remote_read_status()
+
+    result, msg_data = imap_connection.fetch(
+        email_id, _get_fetch_query(remote_read_status=remote_read_status)
+    )
 
     msg = email.message_from_bytes(msg_data[0][1])
 
@@ -209,6 +222,16 @@ def load_email_by_id(imap_connection, email_id, mail_folder="inbox"):
                 f'📨 {email_id} - {extract_from_header(msg=msg, key="subject")} received...'
             )
             return True
+
+
+def _get_fetch_query(remote_read_status):
+    if remote_read_status == config.remote_read_status_preserve:
+        return "(BODY.PEEK[])"
+    if remote_read_status == config.remote_read_status_mark_read:
+        return "(RFC822)"
+    raise ValueError(
+        f"remote_read_status must be one of {sorted(config.remote_read_status_options)}."
+    )
 
 
 def imaptime2datetime(imap_time):

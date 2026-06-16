@@ -78,6 +78,7 @@ def test_load_email_by_id_writes_message_without_marking_remote_read(
         imap_connection=connection,
         email_id=b"1",
         mail_folder="inbox",
+        remote_read_status="preserve",
     )
 
     expected_file = tmp_path / "20260114093000 - Dailyreports [inbox].md"
@@ -99,6 +100,53 @@ def test_load_email_by_id_writes_message_without_marking_remote_read(
     )
 
 
+def test_load_email_by_id_can_mark_remote_read_when_configured(tmp_path, monkeypatch):
+    connection = FakeImapConnection(raw_message=build_message())
+    monkeypatch.setattr(imap, "get_local_mailbox_folder", lambda: str(tmp_path))
+
+    result = imap.load_email_by_id(
+        imap_connection=connection,
+        email_id=b"1",
+        mail_folder="inbox",
+        remote_read_status="mark_read",
+    )
+
+    assert result is True
+    assert connection.fetch_calls == [(b"1", "(RFC822)")]
+
+
+def test_load_email_by_id_uses_configured_remote_read_status(tmp_path, monkeypatch):
+    connection = FakeImapConnection(raw_message=build_message())
+    monkeypatch.setattr(imap, "get_local_mailbox_folder", lambda: str(tmp_path))
+    monkeypatch.setattr(imap.config, "get_remote_read_status", lambda: "mark_read")
+
+    imap.load_email_by_id(
+        imap_connection=connection,
+        email_id=b"1",
+        mail_folder="inbox",
+    )
+
+    assert connection.fetch_calls == [(b"1", "(RFC822)")]
+
+
+def test_load_email_by_id_rejects_invalid_remote_read_status():
+    connection = FakeImapConnection(raw_message=build_message())
+
+    try:
+        imap.load_email_by_id(
+            imap_connection=connection,
+            email_id=b"1",
+            mail_folder="inbox",
+            remote_read_status="sometimes",
+        )
+    except ValueError as error:
+        assert "remote_read_status must be one of" in str(error)
+    else:
+        raise AssertionError("expected invalid remote_read_status to raise")
+
+    assert connection.fetch_calls == []
+
+
 def test_load_email_by_id_skips_existing_local_message(tmp_path, monkeypatch):
     connection = FakeImapConnection(raw_message=build_message())
     monkeypatch.setattr(imap, "get_local_mailbox_folder", lambda: str(tmp_path))
@@ -109,6 +157,7 @@ def test_load_email_by_id_skips_existing_local_message(tmp_path, monkeypatch):
         imap_connection=connection,
         email_id=b"1",
         mail_folder="inbox",
+        remote_read_status="preserve",
     )
 
     assert result is None
@@ -124,10 +173,11 @@ def test_get_mails_selects_folder_loads_each_message_and_closes_connection(monke
     monkeypatch.setattr(
         imap,
         "load_email_by_id",
-        lambda imap_connection, email_id, mail_folder: loaded_messages.append(
-            (imap_connection, email_id, mail_folder)
+        lambda imap_connection, email_id, mail_folder, remote_read_status: loaded_messages.append(
+            (imap_connection, email_id, mail_folder, remote_read_status)
         ),
     )
+    monkeypatch.setattr(imap.config, "get_remote_read_status", lambda: "preserve")
 
     imap._get_mails(
         mail_folder="inbox",
@@ -139,8 +189,8 @@ def test_get_mails_selects_folder_loads_each_message_and_closes_connection(monke
     assert connection.search_calls[0][0] is None
     assert connection.search_calls[0][1].startswith("SINCE ")
     assert loaded_messages == [
-        (connection, b"1", "inbox"),
-        (connection, b"2", "inbox"),
+        (connection, b"1", "inbox", "preserve"),
+        (connection, b"2", "inbox", "preserve"),
     ]
     assert connection.closed is True
     assert connection.logged_out is True
@@ -148,6 +198,7 @@ def test_get_mails_selects_folder_loads_each_message_and_closes_connection(monke
 
 def test_get_mails_keeps_shared_connection_open_when_requested(monkeypatch):
     connection = FakeImapConnection(search_result=b"")
+    monkeypatch.setattr(imap.config, "get_remote_read_status", lambda: "preserve")
 
     imap._get_mails(
         mail_folder="archive",

@@ -50,6 +50,12 @@ def complete_config_file(
             has_updated = True
             data = {key: values}
             append_config_file(data, file_name, default_app_dir)
+        elif isinstance(values, dict) and isinstance(config_params[key], dict):
+            for nested_key, nested_value in values.items():
+                if nested_key not in config_params[key].keys():
+                    has_updated = True
+                    config_params[key][nested_key] = nested_value
+                    overwrite_config_file(config_params, file_name, default_app_dir)
     return has_updated
 
 

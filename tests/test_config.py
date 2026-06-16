@@ -45,6 +45,33 @@ def test_get_mails_reads_from_mails_config(monkeypatch):
     assert calls == [("mails", "days_to_fetch", "cheapchocolate")]
 
 
+def test_get_remote_read_status_defaults_to_preserve_when_missing(monkeypatch):
+    monkeypatch.setattr(
+        config,
+        "get_mails",
+        lambda param: (_ for _ in ()).throw(Exception("missing")),
+    )
+
+    assert config.get_remote_read_status() == "preserve"
+
+
+def test_get_remote_read_status_returns_explicit_mark_read(monkeypatch):
+    monkeypatch.setattr(config, "get_mails", lambda param: "mark_read")
+
+    assert config.get_remote_read_status() == "mark_read"
+
+
+def test_get_remote_read_status_rejects_invalid_value(monkeypatch):
+    monkeypatch.setattr(config, "get_mails", lambda param: "sometimes")
+
+    try:
+        config.get_remote_read_status()
+    except ValueError as error:
+        assert "remote_read_status must be one of" in str(error)
+    else:
+        raise AssertionError("expected invalid remote_read_status to raise")
+
+
 def test_load_config_returns_valid_config(monkeypatch):
     calls = []
     loaded_config = {"default_dirs": {"mailbox": "./mailbox"}}

@@ -77,6 +77,35 @@ def test_complete_config_file_appends_missing_default_sections(tmp_path):
     }
 
 
+def test_complete_config_file_adds_missing_nested_default_values(tmp_path):
+    app_dir = tmp_path / "cheapchocolate"
+    config_files.overwrite_config_file(
+        {"mails": {"days_to_fetch": 1}},
+        "config.yaml",
+        str(app_dir),
+    )
+
+    updated = config_files.complete_config_file(
+        config_params={"mails": {"days_to_fetch": 1}},
+        default_config_params={
+            "mails": {
+                "days_to_fetch": 1,
+                "remote_read_status": "preserve",
+            },
+        },
+        file_name="config.yaml",
+        default_app_dir=str(app_dir),
+    )
+
+    assert updated is True
+    assert yaml.safe_load((app_dir / "config.yaml").read_text()) == {
+        "mails": {
+            "days_to_fetch": 1,
+            "remote_read_status": "preserve",
+        },
+    }
+
+
 def test_complete_config_file_returns_false_when_no_update_is_needed(tmp_path):
     app_dir = tmp_path / "cheapchocolate"
     config_params = {"default_dirs": {}, "mails": {}}
@@ -134,7 +163,7 @@ def test_create_and_read_config_file_completes_existing_file(tmp_path, monkeypat
     existing_config = {"default_dirs": {"mailbox": "./mailbox"}}
     default_config = {
         "default_dirs": {"mailbox": "./mailbox"},
-        "mails": {"days_to_fetch": 1},
+        "mails": {"days_to_fetch": 1, "remote_read_status": "preserve"},
     }
 
     config_files.overwrite_config_file(existing_config, "config.yaml", str(app_dir))
@@ -146,7 +175,7 @@ def test_create_and_read_config_file_completes_existing_file(tmp_path, monkeypat
 
     assert config_files.create_and_read_config_file("config.yaml", str(app_dir)) == {
         "default_dirs": {"mailbox": "./mailbox"},
-        "mails": {"days_to_fetch": 1},
+        "mails": {"days_to_fetch": 1, "remote_read_status": "preserve"},
     }
 
 
@@ -251,5 +280,5 @@ def test_get_default_file_reads_packaged_default_yaml():
     assert config_files._get_default_file("config.yaml") == {
         "default_dirs": {"mailbox": "./mailbox"},
         "default_files": {"mail_folders": "mail_folders.yaml"},
-        "mails": {"days_to_fetch": 1},
+        "mails": {"days_to_fetch": 1, "remote_read_status": "preserve"},
     }
