@@ -8,6 +8,7 @@ class FakeImapConnection:
         self.raw_message = raw_message
         self.search_result = search_result
         self.fetch_calls = []
+        self.store_calls = []
         self.selected_folders = []
         self.search_calls = []
         self.closed = False
@@ -16,6 +17,10 @@ class FakeImapConnection:
     def fetch(self, email_id, query):
         self.fetch_calls.append((email_id, query))
         return "OK", [(b"message", self.raw_message)]
+
+    def store(self, email_id, command, flags):
+        self.store_calls.append((email_id, command, flags))
+        return "OK", []
 
     def select(self, mail_folder):
         self.selected_folders.append(mail_folder)
@@ -63,7 +68,9 @@ def test_clean_folder_name_extracts_remote_folder_name():
     assert imap._clean_folder_name(b'(\\HasNoChildren) "/" "INBOX"') == "INBOX"
 
 
-def test_load_email_by_id_writes_message_to_local_mailbox(tmp_path, monkeypatch):
+def test_load_email_by_id_writes_message_without_marking_remote_read(
+    tmp_path, monkeypatch
+):
     connection = FakeImapConnection(raw_message=build_message())
     monkeypatch.setattr(imap, "get_local_mailbox_folder", lambda: str(tmp_path))
 
@@ -75,7 +82,8 @@ def test_load_email_by_id_writes_message_to_local_mailbox(tmp_path, monkeypatch)
 
     expected_file = tmp_path / "20260114093000 - Dailyreports [inbox].md"
     assert result is True
-    assert connection.fetch_calls == [(b"1", "(RFC822)")]
+    assert connection.fetch_calls == [(b"1", "(BODY.PEEK[])")]
+    assert connection.store_calls == []
     assert expected_file.read_text() == "\n".join(
         [
             "----------",
@@ -104,6 +112,8 @@ def test_load_email_by_id_skips_existing_local_message(tmp_path, monkeypatch):
     )
 
     assert result is None
+    assert connection.fetch_calls == [(b"1", "(BODY.PEEK[])")]
+    assert connection.store_calls == []
     assert existing_file.read_text() == "already downloaded"
 
 

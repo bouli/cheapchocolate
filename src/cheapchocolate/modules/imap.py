@@ -150,7 +150,7 @@ def _get_mails(
 
 def load_email_by_id(imap_connection, email_id, mail_folder="inbox"):
 
-    result, msg_data = imap_connection.fetch(email_id, "(RFC822)")
+    result, msg_data = imap_connection.fetch(email_id, "(BODY.PEEK[])")
 
     msg = email.message_from_bytes(msg_data[0][1])
 
