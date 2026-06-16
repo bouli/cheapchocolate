@@ -250,6 +250,36 @@ class MailFetchingTests(unittest.TestCase):
         connection.fetch.assert_called_once_with(b"1", imap.MUTATING_MESSAGE_FETCH)
         connection.store.assert_not_called()
 
+    def test_get_mails_remote_read_state_override_takes_precedence(self):
+        mail_folders = {"inbox": {"days_to_fetch": 1}}
+        connection = Mock()
+        connection.search.return_value = ("OK", [b"1"])
+
+        with (
+            patch(
+                "cheapchocolate.modules.imap.config.get_mail_folders",
+                return_value=mail_folders,
+            ),
+            patch(
+                "cheapchocolate.modules.imap.config.get_remote_read_state",
+                return_value="preserve",
+            ),
+            patch(
+                "cheapchocolate.modules.imap.get_imap_connection",
+                return_value=connection,
+            ),
+            patch("cheapchocolate.modules.imap.load_email_by_id") as load_email_by_id,
+            patch("cheapchocolate.modules.imap.close_imap_connection"),
+        ):
+            imap.get_mails(remote_read_state="mark_read")
+
+        load_email_by_id.assert_called_once_with(
+            imap_connection=connection,
+            email_id=b"1",
+            mail_folder="inbox",
+            remote_read_state="mark_read",
+        )
+
     def test_message_fetch_rejects_invalid_remote_read_state(self):
         with self.assertRaises(ValueError):
             imap.message_fetch_for_remote_read_state("invalid")
