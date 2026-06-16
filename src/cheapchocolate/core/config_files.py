@@ -17,7 +17,11 @@ def create_and_read_config_file(
     else:
         with open(config_file, "r") as f:
             config_params = yaml.safe_load(f.read())
-        if complete_file:
+        if config_params is None:
+            config_params = create_and_read_config_file(
+                file_name=file_name, default_app_dir=default_app_dir, force_default=True
+            )
+        elif complete_file:
             if complete_config_file(
                 config_params=config_params,
                 default_config_params=default_config_params,
