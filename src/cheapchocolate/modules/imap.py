@@ -13,6 +13,7 @@ from cheapchocolate.modules.mailbox import get_local_mailbox_folder, get_local_m
 
 NON_MUTATING_MESSAGE_FETCH = "(BODY.PEEK[])"
 MUTATING_MESSAGE_FETCH = "(RFC822)"
+DUPLICATE_CHECK_FETCH = "(BODY.PEEK[HEADER.FIELDS (DATE SUBJECT)])"
 
 
 def get_env_file_path():
@@ -184,6 +185,16 @@ def load_email_by_id(
     remote_read_state=config.REMOTE_READ_STATE_PRESERVE,
 ):
 
+    result, header_data = imap_connection.fetch(email_id, DUPLICATE_CHECK_FETCH)
+    header_msg = email.message_from_bytes(header_data[0][1])
+    mailbox_file = local_mailbox_file_path(header_msg, mail_folder)
+
+    if os.path.exists(mailbox_file):
+        print(
+            f'📜 {mailbox_file.stem.replace(f" [{mail_folder}]", "")} previously downloaded...'
+        )
+        return False
+
     message_fetch = message_fetch_for_remote_read_state(remote_read_state)
     result, msg_data = imap_connection.fetch(email_id, message_fetch)
 
@@ -197,53 +208,48 @@ def load_email_by_id(
                 pass
     else:
         body = msg.get_payload(decode=True).decode()
+    with open(mailbox_file, "+w") as f:
+        mail_string = ""
+        mail_string = add_mail_line(mail_string=mail_string, line="-" * 10)
+        mail_string = add_mail_line(
+            mail_string=mail_string,
+            line="from: " + extract_from_header(msg=msg, key="from"),
+        )
+        mail_string = add_mail_line(
+            mail_string=mail_string,
+            line="to: " + extract_from_header(msg=msg, key="to"),
+        )
+        mail_string = add_mail_line(
+            mail_string=mail_string,
+            line='subject: "' + extract_from_header(msg=msg, key="subject") + '"',
+        )
+        mail_string = add_mail_line(
+            mail_string=mail_string,
+            line="date: " + extract_from_header(msg=msg, key="date"),
+        )
+        mail_string = add_mail_line(
+            mail_string=mail_string,
+            line='mail_folder: "' + mail_folder + '"',
+        )
+        mail_string = add_mail_line(mail_string=mail_string, line="-" * 10)
+        mail_string = add_mail_line(mail_string=mail_string, line=body)
+        mail_string = add_mail_line(mail_string=mail_string, line="-" * 10)
+        f.write(mail_string)
+        print(
+            f'📨 {mailbox_file.stem.replace(f" [{mail_folder}]", "")} received...'
+        )
+        return True
+
+
+def local_mailbox_file_path(msg, mail_folder):
     email_id = imaptime2datetime(extract_from_header(msg=msg, key="date"))
-    mailbox_folder = get_local_mailbox_folder()
     subject_file_name = (
         extract_from_header(msg=msg, key="subject").replace("'", "").replace("/", "")
     )
-
-    if os.path.exists(
-        f"{mailbox_folder}/{email_id} - {subject_file_name} [{mail_folder}].md"
-    ):
-        print(
-            f'📜 {email_id} - {extract_from_header(msg=msg, key="subject")} previously downloaded...'
-        )
-    else:
-        with open(
-            f"{mailbox_folder}/{email_id} - {subject_file_name} [{mail_folder}].md",
-            "+w",
-        ) as f:
-            mail_string = ""
-            mail_string = add_mail_line(mail_string=mail_string, line="-" * 10)
-            mail_string = add_mail_line(
-                mail_string=mail_string,
-                line="from: " + extract_from_header(msg=msg, key="from"),
-            )
-            mail_string = add_mail_line(
-                mail_string=mail_string,
-                line="to: " + extract_from_header(msg=msg, key="to"),
-            )
-            mail_string = add_mail_line(
-                mail_string=mail_string,
-                line='subject: "' + extract_from_header(msg=msg, key="subject") + '"',
-            )
-            mail_string = add_mail_line(
-                mail_string=mail_string,
-                line="date: " + extract_from_header(msg=msg, key="date"),
-            )
-            mail_string = add_mail_line(
-                mail_string=mail_string,
-                line='mail_folder: "' + mail_folder + '"',
-            )
-            mail_string = add_mail_line(mail_string=mail_string, line="-" * 10)
-            mail_string = add_mail_line(mail_string=mail_string, line=body)
-            mail_string = add_mail_line(mail_string=mail_string, line="-" * 10)
-            f.write(mail_string)
-            print(
-                f'📨 {email_id} - {extract_from_header(msg=msg, key="subject")} received...'
-            )
-            return True
+    return Path(
+        get_local_mailbox_folder(),
+        f"{email_id} - {subject_file_name} [{mail_folder}].md",
+    )
 
 
 def message_fetch_for_remote_read_state(remote_read_state):

@@ -175,7 +175,10 @@ class MailFetchingTests(unittest.TestCase):
 
         connection = Mock()
         connection.search.return_value = ("OK", [b"1"])
-        connection.fetch.return_value = ("OK", [(b"1", message.as_bytes())])
+        connection.fetch.side_effect = [
+            ("OK", [(b"1", message.as_bytes())]),
+            ("OK", [(b"1", message.as_bytes())]),
+        ]
 
         with tempfile.TemporaryDirectory() as mailbox_folder:
             with (
@@ -192,8 +195,11 @@ class MailFetchingTests(unittest.TestCase):
             ):
                 imap._get_mails(mail_folder="inbox", imap_connection=connection)
 
-        connection.fetch.assert_called_once_with(
-            b"1", imap.NON_MUTATING_MESSAGE_FETCH
+        connection.fetch.assert_has_calls(
+            [
+                call(b"1", imap.DUPLICATE_CHECK_FETCH),
+                call(b"1", imap.NON_MUTATING_MESSAGE_FETCH),
+            ]
         )
         connection.store.assert_not_called()
 
@@ -230,7 +236,10 @@ class MailFetchingTests(unittest.TestCase):
 
         connection = Mock()
         connection.search.return_value = ("OK", [b"1"])
-        connection.fetch.return_value = ("OK", [(b"1", message.as_bytes())])
+        connection.fetch.side_effect = [
+            ("OK", [(b"1", message.as_bytes())]),
+            ("OK", [(b"1", message.as_bytes())]),
+        ]
 
         with tempfile.TemporaryDirectory() as mailbox_folder:
             with (
@@ -247,7 +256,12 @@ class MailFetchingTests(unittest.TestCase):
             ):
                 imap._get_mails(mail_folder="inbox", imap_connection=connection)
 
-        connection.fetch.assert_called_once_with(b"1", imap.MUTATING_MESSAGE_FETCH)
+        connection.fetch.assert_has_calls(
+            [
+                call(b"1", imap.DUPLICATE_CHECK_FETCH),
+                call(b"1", imap.MUTATING_MESSAGE_FETCH),
+            ]
+        )
         connection.store.assert_not_called()
 
     def test_get_mails_remote_read_state_override_takes_precedence(self):
@@ -320,7 +334,10 @@ class MessageParsingTests(unittest.TestCase):
         message.set_content("Hello from the body")
 
         connection = Mock()
-        connection.fetch.return_value = ("OK", [(b"1", message.as_bytes())])
+        connection.fetch.side_effect = [
+            ("OK", [(b"1", message.as_bytes())]),
+            ("OK", [(b"1", message.as_bytes())]),
+        ]
 
         with tempfile.TemporaryDirectory() as mailbox_folder:
             with patch(
@@ -336,6 +353,12 @@ class MessageParsingTests(unittest.TestCase):
             self.assertTrue(written_file.exists())
             self.assertIn("from: sender@example.com", written_file.read_text())
             self.assertIn("Hello from the body", written_file.read_text())
+            connection.fetch.assert_has_calls(
+                [
+                    call(b"1", imap.DUPLICATE_CHECK_FETCH),
+                    call(b"1", imap.NON_MUTATING_MESSAGE_FETCH),
+                ]
+            )
 
     def test_load_email_by_id_fetches_without_marking_remote_message_read(self):
         message = EmailMessage()
@@ -346,7 +369,10 @@ class MessageParsingTests(unittest.TestCase):
         message.set_content("Body")
 
         connection = Mock()
-        connection.fetch.return_value = ("OK", [(b"1", message.as_bytes())])
+        connection.fetch.side_effect = [
+            ("OK", [(b"1", message.as_bytes())]),
+            ("OK", [(b"1", message.as_bytes())]),
+        ]
 
         with tempfile.TemporaryDirectory() as mailbox_folder:
             with patch(
@@ -355,9 +381,71 @@ class MessageParsingTests(unittest.TestCase):
             ):
                 imap.load_email_by_id(connection, b"1", mail_folder="inbox")
 
-        connection.fetch.assert_called_once_with(
-            b"1", imap.NON_MUTATING_MESSAGE_FETCH
+        connection.fetch.assert_has_calls(
+            [
+                call(b"1", imap.DUPLICATE_CHECK_FETCH),
+                call(b"1", imap.NON_MUTATING_MESSAGE_FETCH),
+            ]
         )
+        connection.store.assert_not_called()
+
+    def test_load_email_by_id_skips_duplicate_without_rewriting_local_file(self):
+        message = EmailMessage()
+        message["from"] = "sender@example.com"
+        message["to"] = "receiver@example.com"
+        message["subject"] = "Already Local"
+        message["date"] = "Mon, 01 Jan 2024 12:34:56 +0000"
+        message.set_content("Remote body")
+
+        connection = Mock()
+        connection.fetch.return_value = ("OK", [(b"1", message.as_bytes())])
+
+        with tempfile.TemporaryDirectory() as mailbox_folder:
+            existing_file = (
+                Path(mailbox_folder) / "20240101123456 - Already Local [inbox].md"
+            )
+            existing_file.write_text("existing local content")
+
+            with patch(
+                "cheapchocolate.modules.imap.get_local_mailbox_folder",
+                return_value=mailbox_folder,
+            ):
+                result = imap.load_email_by_id(
+                    connection,
+                    b"1",
+                    mail_folder="inbox",
+                    remote_read_state="mark_read",
+                )
+
+            self.assertFalse(result)
+            self.assertEqual(existing_file.read_text(), "existing local content")
+
+        connection.fetch.assert_called_once_with(b"1", imap.DUPLICATE_CHECK_FETCH)
+        connection.store.assert_not_called()
+
+    def test_duplicate_check_filesystem_error_happens_before_mutating_fetch(self):
+        message = EmailMessage()
+        message["subject"] = "Already Local"
+        message["date"] = "Mon, 01 Jan 2024 12:34:56 +0000"
+
+        connection = Mock()
+        connection.fetch.return_value = ("OK", [(b"1", message.as_bytes())])
+
+        with (
+            patch(
+                "cheapchocolate.modules.imap.get_local_mailbox_folder",
+                side_effect=OSError("mailbox unavailable"),
+            ),
+            self.assertRaises(OSError),
+        ):
+            imap.load_email_by_id(
+                connection,
+                b"1",
+                mail_folder="inbox",
+                remote_read_state="mark_read",
+            )
+
+        connection.fetch.assert_called_once_with(b"1", imap.DUPLICATE_CHECK_FETCH)
         connection.store.assert_not_called()
 
 
