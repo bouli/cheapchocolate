@@ -147,6 +147,50 @@ class MailFetchingTests(unittest.TestCase):
         )
         close.assert_not_called()
 
+    def test_get_mails_uses_non_mutating_fetch_for_default_receive_path(self):
+        message = EmailMessage()
+        message["from"] = "sender@example.com"
+        message["to"] = "receiver@example.com"
+        message["subject"] = "Unread Message"
+        message["date"] = "Mon, 01 Jan 2024 12:34:56 +0000"
+        message.set_content("Unread body")
+
+        connection = Mock()
+        connection.search.return_value = ("OK", [b"1"])
+        connection.fetch.return_value = ("OK", [(b"1", message.as_bytes())])
+
+        with tempfile.TemporaryDirectory() as mailbox_folder:
+            with (
+                patch("cheapchocolate.modules.imap.config.get_mails", return_value="1"),
+                patch(
+                    "cheapchocolate.modules.imap.get_local_mailbox_folder",
+                    return_value=mailbox_folder,
+                ),
+                patch("cheapchocolate.modules.imap.close_imap_connection"),
+            ):
+                imap._get_mails(mail_folder="inbox", imap_connection=connection)
+
+        connection.fetch.assert_called_once_with(
+            b"1", imap.NON_MUTATING_MESSAGE_FETCH
+        )
+        connection.store.assert_not_called()
+
+    def test_get_mails_uses_non_mutating_fetch_for_single_folder_receive_path(self):
+        connection = Mock()
+        connection.search.return_value = ("OK", [b"1"])
+
+        with (
+            patch("cheapchocolate.modules.imap.config.get_mails", return_value="1"),
+            patch("cheapchocolate.modules.imap.load_email_by_id") as load_email_by_id,
+            patch("cheapchocolate.modules.imap.close_imap_connection"),
+        ):
+            imap._get_mails(mail_folder="Archive", imap_connection=connection)
+
+        load_email_by_id.assert_called_once_with(
+            imap_connection=connection, email_id=b"1", mail_folder="Archive"
+        )
+        connection.store.assert_not_called()
+
 
 class MessageParsingTests(unittest.TestCase):
     def test_imaptime2datetime_converts_header_date(self):
@@ -199,6 +243,29 @@ class MessageParsingTests(unittest.TestCase):
             self.assertTrue(written_file.exists())
             self.assertIn("from: sender@example.com", written_file.read_text())
             self.assertIn("Hello from the body", written_file.read_text())
+
+    def test_load_email_by_id_fetches_without_marking_remote_message_read(self):
+        message = EmailMessage()
+        message["from"] = "sender@example.com"
+        message["to"] = "receiver@example.com"
+        message["subject"] = "Preserved Status"
+        message["date"] = "Mon, 01 Jan 2024 12:34:56 +0000"
+        message.set_content("Body")
+
+        connection = Mock()
+        connection.fetch.return_value = ("OK", [(b"1", message.as_bytes())])
+
+        with tempfile.TemporaryDirectory() as mailbox_folder:
+            with patch(
+                "cheapchocolate.modules.imap.get_local_mailbox_folder",
+                return_value=mailbox_folder,
+            ):
+                imap.load_email_by_id(connection, b"1", mail_folder="inbox")
+
+        connection.fetch.assert_called_once_with(
+            b"1", imap.NON_MUTATING_MESSAGE_FETCH
+        )
+        connection.store.assert_not_called()
 
 
 if __name__ == "__main__":

@@ -11,6 +11,8 @@ from dotenv import load_dotenv
 from cheapchocolate.core import config
 from cheapchocolate.modules.mailbox import get_local_mailbox_folder, get_local_mails
 
+NON_MUTATING_MESSAGE_FETCH = "(BODY.PEEK[])"
+
 
 def get_env_file_path():
     return Path.cwd() / ".env"
@@ -169,7 +171,7 @@ def _get_mails(
 
 def load_email_by_id(imap_connection, email_id, mail_folder="inbox"):
 
-    result, msg_data = imap_connection.fetch(email_id, "(RFC822)")
+    result, msg_data = imap_connection.fetch(email_id, NON_MUTATING_MESSAGE_FETCH)
 
     msg = email.message_from_bytes(msg_data[0][1])
 
