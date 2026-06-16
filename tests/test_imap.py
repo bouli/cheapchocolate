@@ -196,6 +196,61 @@ def test_get_mails_selects_folder_loads_each_message_and_closes_connection(monke
     assert connection.logged_out is True
 
 
+def test_get_mails_single_folder_override_takes_precedence_over_config(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr(
+        imap,
+        "_get_mails",
+        lambda mail_folder, remote_read_status=None: calls.append(
+            (mail_folder, remote_read_status)
+        ),
+    )
+
+    imap.get_mails("inbox", remote_read_status="mark_read")
+
+    assert calls == [("inbox", "mark_read")]
+
+
+def test_get_mails_default_folders_override_takes_precedence_over_config(monkeypatch):
+    connection = FakeImapConnection()
+    calls = []
+
+    monkeypatch.setattr(
+        imap.config,
+        "get_mail_folders",
+        lambda: {
+            "inbox": {"days_to_fetch": 1},
+            "archive": {"days_to_fetch": 2},
+        },
+    )
+    monkeypatch.setattr(imap, "get_imap_connection", lambda: connection)
+    monkeypatch.setattr(
+        imap,
+        "_get_mails",
+        lambda mail_folder,
+        days_to_fetch,
+        imap_connection,
+        let_imap_connection_opened,
+        remote_read_status: calls.append(
+            (
+                mail_folder,
+                days_to_fetch,
+                imap_connection,
+                let_imap_connection_opened,
+                remote_read_status,
+            )
+        ),
+    )
+
+    imap.get_mails(remote_read_status="mark_read")
+
+    assert calls == [
+        ("inbox", 1, connection, True, "mark_read"),
+        ("archive", 2, connection, True, "mark_read"),
+    ]
+
+
 def test_get_mails_keeps_shared_connection_open_when_requested(monkeypatch):
     connection = FakeImapConnection(search_result=b"")
     monkeypatch.setattr(imap.config, "get_remote_read_status", lambda: "preserve")

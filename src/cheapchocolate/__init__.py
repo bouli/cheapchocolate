@@ -18,6 +18,12 @@ def main():
         default="mail_folders",
         help="Choose an specific mailbox folder to check.",
     )
+    start_parser.add_argument(
+        "--remote-read-status",
+        choices=["preserve", "mark_read"],
+        default=None,
+        help="Choose whether receiving mail preserves remote read status or marks mail read.",
+    )
 
     folder_parser = subparsers.add_parser(
         "folders",
@@ -26,7 +32,7 @@ def main():
     args = parser.parse_args()
 
     if args.command == "start":
-        get_mails(args.folder)
+        get_mails(args.folder, remote_read_status=args.remote_read_status)
 
     if args.command == "folders":
         get_folders()

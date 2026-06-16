@@ -87,9 +87,9 @@ def _clean_folder_name(folder):
     return folder_name
 
 
-def get_mails(mail_folder="mail_folders"):
+def get_mails(mail_folder="mail_folders", remote_read_status=None):
     if mail_folder != "mail_folders":
-        _get_mails(mail_folder=mail_folder)
+        _get_mails(mail_folder=mail_folder, remote_read_status=remote_read_status)
     else:
         mail_folders = config.get_mail_folders()
         imap_connection = get_imap_connection()
@@ -99,6 +99,7 @@ def get_mails(mail_folder="mail_folders"):
                 days_to_fetch=int(data["days_to_fetch"]),
                 imap_connection=imap_connection,
                 let_imap_connection_opened=True,
+                remote_read_status=remote_read_status,
             )
 
         close_imap_connection(imap_connection)
