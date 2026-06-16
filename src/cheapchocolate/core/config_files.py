@@ -42,12 +42,29 @@ def complete_config_file(
     config_params, default_config_params, file_name, default_app_dir
 ):
     has_updated = False
-    for key, values in default_config_params.items():
-        if key not in config_params.keys():
-            has_updated = True
-            data = {key: values}
-            append_config_file(data, file_name, default_app_dir)
+    completed_config_params = _complete_missing_values(
+        config_params=config_params,
+        default_config_params=default_config_params,
+    )
+    if completed_config_params != config_params:
+        has_updated = True
+        overwrite_config_file(completed_config_params, file_name, default_app_dir)
     return has_updated
+
+
+def _complete_missing_values(config_params, default_config_params):
+    completed_config_params = dict(config_params)
+    for key, default_value in default_config_params.items():
+        if key not in completed_config_params:
+            completed_config_params[key] = default_value
+        elif isinstance(default_value, dict) and isinstance(
+            completed_config_params[key], dict
+        ):
+            completed_config_params[key] = _complete_missing_values(
+                config_params=completed_config_params[key],
+                default_config_params=default_value,
+            )
+    return completed_config_params
 
 
 def overwrite_config_file(data, file_name, default_app_dir):

@@ -115,6 +115,10 @@ class MailFetchingTests(unittest.TestCase):
 
         with (
             patch("cheapchocolate.modules.imap.config.get_mails", return_value="1"),
+            patch(
+                "cheapchocolate.modules.imap.config.get_remote_read_state",
+                return_value="preserve",
+            ),
             patch("cheapchocolate.modules.imap.close_imap_connection") as close,
         ):
             result = imap._get_mails(mail_folder="inbox", imap_connection=connection)
@@ -130,6 +134,10 @@ class MailFetchingTests(unittest.TestCase):
 
         with (
             patch("cheapchocolate.modules.imap.config.get_mails", return_value="1"),
+            patch(
+                "cheapchocolate.modules.imap.config.get_remote_read_state",
+                return_value="preserve",
+            ),
             patch("cheapchocolate.modules.imap.load_email_by_id") as load_email_by_id,
             patch("cheapchocolate.modules.imap.close_imap_connection") as close,
         ):
@@ -141,8 +149,18 @@ class MailFetchingTests(unittest.TestCase):
 
         load_email_by_id.assert_has_calls(
             [
-                call(imap_connection=connection, email_id=b"1", mail_folder="inbox"),
-                call(imap_connection=connection, email_id=b"2", mail_folder="inbox"),
+                call(
+                    imap_connection=connection,
+                    email_id=b"1",
+                    mail_folder="inbox",
+                    remote_read_state="preserve",
+                ),
+                call(
+                    imap_connection=connection,
+                    email_id=b"2",
+                    mail_folder="inbox",
+                    remote_read_state="preserve",
+                ),
             ]
         )
         close.assert_not_called()
@@ -163,6 +181,10 @@ class MailFetchingTests(unittest.TestCase):
             with (
                 patch("cheapchocolate.modules.imap.config.get_mails", return_value="1"),
                 patch(
+                    "cheapchocolate.modules.imap.config.get_remote_read_state",
+                    return_value="preserve",
+                ),
+                patch(
                     "cheapchocolate.modules.imap.get_local_mailbox_folder",
                     return_value=mailbox_folder,
                 ),
@@ -181,15 +203,56 @@ class MailFetchingTests(unittest.TestCase):
 
         with (
             patch("cheapchocolate.modules.imap.config.get_mails", return_value="1"),
+            patch(
+                "cheapchocolate.modules.imap.config.get_remote_read_state",
+                return_value="preserve",
+            ),
             patch("cheapchocolate.modules.imap.load_email_by_id") as load_email_by_id,
             patch("cheapchocolate.modules.imap.close_imap_connection"),
         ):
             imap._get_mails(mail_folder="Archive", imap_connection=connection)
 
         load_email_by_id.assert_called_once_with(
-            imap_connection=connection, email_id=b"1", mail_folder="Archive"
+            imap_connection=connection,
+            email_id=b"1",
+            mail_folder="Archive",
+            remote_read_state="preserve",
         )
         connection.store.assert_not_called()
+
+    def test_get_mails_uses_mutating_fetch_when_config_marks_remote_read(self):
+        message = EmailMessage()
+        message["from"] = "sender@example.com"
+        message["to"] = "receiver@example.com"
+        message["subject"] = "Read During Receive"
+        message["date"] = "Mon, 01 Jan 2024 12:34:56 +0000"
+        message.set_content("Body")
+
+        connection = Mock()
+        connection.search.return_value = ("OK", [b"1"])
+        connection.fetch.return_value = ("OK", [(b"1", message.as_bytes())])
+
+        with tempfile.TemporaryDirectory() as mailbox_folder:
+            with (
+                patch("cheapchocolate.modules.imap.config.get_mails", return_value="1"),
+                patch(
+                    "cheapchocolate.modules.imap.config.get_remote_read_state",
+                    return_value="mark_read",
+                ),
+                patch(
+                    "cheapchocolate.modules.imap.get_local_mailbox_folder",
+                    return_value=mailbox_folder,
+                ),
+                patch("cheapchocolate.modules.imap.close_imap_connection"),
+            ):
+                imap._get_mails(mail_folder="inbox", imap_connection=connection)
+
+        connection.fetch.assert_called_once_with(b"1", imap.MUTATING_MESSAGE_FETCH)
+        connection.store.assert_not_called()
+
+    def test_message_fetch_rejects_invalid_remote_read_state(self):
+        with self.assertRaises(ValueError):
+            imap.message_fetch_for_remote_read_state("invalid")
 
 
 class MessageParsingTests(unittest.TestCase):

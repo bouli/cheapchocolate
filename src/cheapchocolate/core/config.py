@@ -3,6 +3,12 @@ import os
 from cheapchocolate.core import config_files
 
 default_app_dir = "cheapchocolate"
+REMOTE_READ_STATE_PRESERVE = "preserve"
+REMOTE_READ_STATE_MARK_READ = "mark_read"
+VALID_REMOTE_READ_STATES = {
+    REMOTE_READ_STATE_PRESERVE,
+    REMOTE_READ_STATE_MARK_READ,
+}
 
 
 def get_dir(param="cheapchocolate"):
@@ -24,6 +30,29 @@ def get_mails(param):
     return config_files.get_param(
         parent_param=parent_param, param=param, default_app_dir=default_app_dir
     )
+
+
+def get_remote_read_state():
+    remote_read_state = get_mails("remote_read_state")
+    if remote_read_state not in VALID_REMOTE_READ_STATES:
+        valid_values = ", ".join(sorted(VALID_REMOTE_READ_STATES))
+        raise ValueError(
+            f"Invalid mails.remote_read_state: {remote_read_state}. "
+            f"Expected one of: {valid_values}."
+        )
+    return remote_read_state
+
+
+def should_mark_remote_read(remote_read_state=None):
+    if remote_read_state is None:
+        remote_read_state = get_remote_read_state()
+    elif remote_read_state not in VALID_REMOTE_READ_STATES:
+        valid_values = ", ".join(sorted(VALID_REMOTE_READ_STATES))
+        raise ValueError(
+            f"Invalid mails.remote_read_state: {remote_read_state}. "
+            f"Expected one of: {valid_values}."
+        )
+    return remote_read_state == REMOTE_READ_STATE_MARK_READ
 
 
 def load_config(force_default=False):

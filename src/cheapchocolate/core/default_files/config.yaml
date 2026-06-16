@@ -4,3 +4,4 @@ default_files:
   mail_folders: mail_folders.yaml
 mails:
   days_to_fetch: 1
+  remote_read_state: preserve

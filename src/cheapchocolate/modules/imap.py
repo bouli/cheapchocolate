@@ -12,6 +12,7 @@ from cheapchocolate.core import config
 from cheapchocolate.modules.mailbox import get_local_mailbox_folder, get_local_mails
 
 NON_MUTATING_MESSAGE_FETCH = "(BODY.PEEK[])"
+MUTATING_MESSAGE_FETCH = "(RFC822)"
 
 
 def get_env_file_path():
@@ -131,9 +132,12 @@ def _get_mails(
     days_to_fetch: int = 0,
     imap_connection=None,
     let_imap_connection_opened=False,
+    remote_read_state=None,
 ):
     if days_to_fetch == 0:
         days_to_fetch = int(config.get_mails("days_to_fetch"))
+    if remote_read_state is None:
+        remote_read_state = config.get_remote_read_state()
 
     days_to_fetch = days_to_fetch * -1
 
@@ -161,7 +165,10 @@ def _get_mails(
 
     for email_id in mails_to_receive:
         load_email_by_id(
-            imap_connection=imap_connection, email_id=email_id, mail_folder=mail_folder
+            imap_connection=imap_connection,
+            email_id=email_id,
+            mail_folder=mail_folder,
+            remote_read_state=remote_read_state,
         )
 
     if not let_imap_connection_opened:
@@ -169,9 +176,15 @@ def _get_mails(
         print("🍫 We are done, let`s have a dessert...")
 
 
-def load_email_by_id(imap_connection, email_id, mail_folder="inbox"):
+def load_email_by_id(
+    imap_connection,
+    email_id,
+    mail_folder="inbox",
+    remote_read_state=config.REMOTE_READ_STATE_PRESERVE,
+):
 
-    result, msg_data = imap_connection.fetch(email_id, NON_MUTATING_MESSAGE_FETCH)
+    message_fetch = message_fetch_for_remote_read_state(remote_read_state)
+    result, msg_data = imap_connection.fetch(email_id, message_fetch)
 
     msg = email.message_from_bytes(msg_data[0][1])
 
@@ -230,6 +243,12 @@ def load_email_by_id(imap_connection, email_id, mail_folder="inbox"):
                 f'📨 {email_id} - {extract_from_header(msg=msg, key="subject")} received...'
             )
             return True
+
+
+def message_fetch_for_remote_read_state(remote_read_state):
+    if config.should_mark_remote_read(remote_read_state):
+        return MUTATING_MESSAGE_FETCH
+    return NON_MUTATING_MESSAGE_FETCH
 
 
 def imaptime2datetime(imap_time):
