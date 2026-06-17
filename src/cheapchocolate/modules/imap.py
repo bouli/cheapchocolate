@@ -236,9 +236,7 @@ def load_email_by_id(
         mail_string = add_mail_line(mail_string=mail_string, line=body)
         mail_string = add_mail_line(mail_string=mail_string, line="-" * 10)
         f.write(mail_string)
-        print(
-            f'📨 {mailbox_file.stem.replace(f" [{mail_folder}]", "")} received...'
-        )
+        print(f'📨 {mailbox_file.stem.replace(f" [{mail_folder}]", "")} received...')
         return True
 
 

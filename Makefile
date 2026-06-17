@@ -13,7 +13,7 @@ report:
 prepare:
 	rm -rf dist
 	rm -rf build
-	git log v0.5.4..HEAD --oneline --format="* %h %s (%an)" > CHANGELOG.md
+	git log v0.6.0..HEAD --oneline --format="* %h %s (%an)" > CHANGELOG.md
 
 start-codex:
 	@if sbx secret ls | grep -qi "openai"; then\
