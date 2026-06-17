@@ -7,6 +7,7 @@ name = "cheapchocolate"
 version = "0.6.0"
 source = { editable = "." }
 dependencies = [
+    { name = "conveoconfi" },
     { name = "dotenv" },
     { name = "pyyaml" },
 ]
@@ -19,6 +20,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "conveoconfi", specifier = ">=0.1.0" },
     { name = "dotenv", specifier = ">=0.9.9" },
     { name = "pyyaml", specifier = ">=6.0.3" },
 ]
@@ -36,6 +38,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/d8/53/6f443c9a4a8358a93a6792e2acffb9d9d5cb0a5cfd8802644b7b1c9a02e4/colorama-0.4.6.tar.gz", hash = "sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44", size = 27697, upload-time = "2022-10-25T02:36:22.414Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6", size = 25335, upload-time = "2022-10-25T02:36:20.889Z" },
+]
+
+[[package]]
+name = "conveoconfi"
+version = "0.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pyyaml" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ac/1f/9383dfc10f95b958e8b7a6accbb350c4e04b8b7e9eb91db1b8bedd2c508b/conveoconfi-0.1.0.tar.gz", hash = "sha256:e440e07684f0aae31e0f75eae2fa20d0c78ee1696058a82cb5ec27a28e598d68", size = 28601, upload-time = "2026-06-17T10:06:28.064Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4d/b7/0615e902e08ee826f87640653422dc69115b5001fdac80667f6b9f2d4641/conveoconfi-0.1.0-py3-none-any.whl", hash = "sha256:fbbac603516247a3ac0ebaab94d46be93073d03b86da35aca53f4ea85183a824", size = 4222, upload-time = "2026-06-17T10:06:26.79Z" },
 ]
 
 [[package]]

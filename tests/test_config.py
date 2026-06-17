@@ -1,6 +1,7 @@
 import yaml
+from conveoconfi import create_and_read_config_file
 
-from cheapchocolate.core import config, config_files
+from cheapchocolate.core import config
 
 
 def test_load_config_creates_safe_default_remote_read_state(tmp_path, monkeypatch):
@@ -102,9 +103,10 @@ def test_complete_config_file_preserves_existing_nested_values(tmp_path):
         )
     )
 
-    config_files.create_and_read_config_file(
+    create_and_read_config_file(
         file_name="config.yaml",
         default_app_dir=str(app_dir),
+        default_files_dir=config.default_files_dir,
     )
 
     assert yaml.safe_load(config_file.read_text())["mails"] == {

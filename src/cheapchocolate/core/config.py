@@ -1,8 +1,10 @@
 import os
-
-from cheapchocolate.core import config_files
+import conveoconfi
 
 default_app_dir = "cheapchocolate"
+default_files_dir = os.path.join(
+    os.path.dirname(os.path.realpath(__file__)), "default_files"
+)
 REMOTE_READ_STATE_PRESERVE = "preserve"
 REMOTE_READ_STATE_MARK_READ = "mark_read"
 VALID_REMOTE_READ_STATES = {
@@ -17,8 +19,11 @@ def get_dir(param="cheapchocolate"):
     if param == default_app_dir:
         folder = "./" + param
     else:
-        folder = config_files.get_param(
-            parent_param=parent_param, param=param, default_app_dir=default_app_dir
+        folder = conveoconfi.get_param(
+            parent_param=parent_param,
+            param=param,
+            default_app_dir=default_app_dir,
+            default_files_dir=default_files_dir,
         )
     if not os.path.exists(folder):
         os.mkdir(folder)
@@ -27,8 +32,11 @@ def get_dir(param="cheapchocolate"):
 
 def get_mails(param):
     parent_param = "mails"
-    return config_files.get_param(
-        parent_param=parent_param, param=param, default_app_dir=default_app_dir
+    return conveoconfi.get_param(
+        parent_param=parent_param,
+        param=param,
+        default_app_dir=default_app_dir,
+        default_files_dir=default_files_dir,
     )
 
 
@@ -57,10 +65,11 @@ def should_mark_remote_read(remote_read_state=None):
 
 def load_config(force_default=False):
     config_file_name = "config.yaml"
-    config_params = config_files.create_and_read_config_file(
+    config_params = conveoconfi.create_and_read_config_file(
         file_name=config_file_name,
         default_app_dir=default_app_dir,
         force_default=force_default,
+        default_files_dir=default_files_dir,
     )
 
     if config_params is None or "default_dirs" not in config_params:
@@ -71,23 +80,30 @@ def load_config(force_default=False):
 
 def get_files(param):
     parent_param = "default_files"
-    return config_files.get_param(
-        parent_param=parent_param, param=param, default_app_dir=default_app_dir
+    return conveoconfi.get_param(
+        parent_param=parent_param,
+        param=param,
+        default_app_dir=default_app_dir,
+        default_files_dir=default_files_dir,
     )
 
 
 def get_param(parent_param, param):
-    return config_files.get_param(
-        parent_param=parent_param, param=param, default_app_dir=default_app_dir
+    return conveoconfi.get_param(
+        parent_param=parent_param,
+        param=param,
+        default_app_dir=default_app_dir,
+        default_files_dir=default_files_dir,
     )
 
 
 def get_mail_folders():
     mail_folders = get_files(param="mail_folders")
-    return config_files.create_and_read_config_file(
+    return conveoconfi.create_and_read_config_file(
         file_name=mail_folders,
         default_app_dir=default_app_dir,
         complete_file=False,
+        default_files_dir=default_files_dir,
     )
 
 
@@ -98,8 +114,8 @@ def add_mail_folder(mail_folder):
 
 
 def overwrite_config_file(data, file_name):
-    config_files.overwrite_config_file(data, file_name, default_app_dir=default_app_dir)
+    conveoconfi.overwrite_config_file(file_name=file_name, default_app_dir=default_app_dir, data=data)
 
 
 def _append_config_file(data, file_name):
-    config_files.append_config_file(data, file_name, default_app_dir=default_app_dir)
+    conveoconfi.append_config_file(file_name=file_name, default_app_dir=default_app_dir, data=data)
