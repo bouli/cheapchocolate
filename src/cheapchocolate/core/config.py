@@ -1,4 +1,5 @@
 import os
+
 import conveoconfi
 
 default_app_dir = "cheapchocolate"
@@ -114,8 +115,12 @@ def add_mail_folder(mail_folder):
 
 
 def overwrite_config_file(data, file_name):
-    conveoconfi.overwrite_config_file(file_name=file_name, default_app_dir=default_app_dir, data=data)
+    conveoconfi.overwrite_config_file(
+        file_name=file_name, default_app_dir=default_app_dir, data=data
+    )
 
 
 def _append_config_file(data, file_name):
-    conveoconfi.append_config_file(file_name=file_name, default_app_dir=default_app_dir, data=data)
+    conveoconfi.append_config_file(
+        file_name=file_name, default_app_dir=default_app_dir, data=data
+    )
