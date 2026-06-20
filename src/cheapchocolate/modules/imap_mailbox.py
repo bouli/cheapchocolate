@@ -12,6 +12,14 @@ class MailboxParseError(ValueError):
     pass
 
 
+def select_mailbox_name(imap_name):
+    if _is_atom(imap_name):
+        return imap_name
+
+    escaped = imap_name.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
+
+
 def parse_mailbox_list_entries(entries):
     options = []
     for entry in entries:
@@ -179,3 +187,17 @@ def _read_atom(response, start_index):
         index += 1
 
     return response[start_index:index], index
+
+
+def _is_atom(value):
+    if value == "":
+        return False
+
+    atom_specials = set('(){ %*"\\]')
+    for character in value:
+        if ord(character) < 0x20 or ord(character) == 0x7F:
+            return False
+        if character in atom_specials:
+            return False
+
+    return True

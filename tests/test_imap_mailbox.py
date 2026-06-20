@@ -7,6 +7,7 @@ from cheapchocolate.modules.imap_mailbox import (
     encode_modified_utf7,
     parse_mailbox_list_entries,
     parse_mailbox_list_entry,
+    select_mailbox_name,
 )
 
 
@@ -103,6 +104,23 @@ class ModifiedUtf7Tests(unittest.TestCase):
         value = "! choir \U0001D11E"
 
         self.assertEqual(decode_modified_utf7(encode_modified_utf7(value)), value)
+
+
+class SelectMailboxNameTests(unittest.TestCase):
+    def test_atom_mailbox_name_is_not_quoted(self):
+        self.assertEqual(select_mailbox_name("INBOX"), "INBOX")
+
+    def test_mailbox_name_with_spaces_is_quoted(self):
+        self.assertEqual(
+            select_mailbox_name("! choir &2DTdHg-"),
+            '"! choir &2DTdHg-"',
+        )
+
+    def test_mailbox_name_with_quote_is_escaped(self):
+        self.assertEqual(
+            select_mailbox_name('Project "Alpha"'),
+            '"Project \\"Alpha\\""',
+        )
 
 
 if __name__ == "__main__":

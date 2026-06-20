@@ -9,6 +9,10 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from cheapchocolate.core import config
+from cheapchocolate.modules.imap_mailbox import (
+    parse_mailbox_list_entries,
+    select_mailbox_name,
+)
 from cheapchocolate.modules.mailbox import get_local_mailbox_folder, get_local_mails
 
 NON_MUTATING_MESSAGE_FETCH = "(BODY.PEEK[])"
@@ -67,13 +71,18 @@ def get_folders():
         print(f"😅 You have no new folder...")
         close_imap_connection(imap_connection)
         return
+    folder_options = parse_mailbox_list_entries(folders_list)
+    if len(folder_options) == 0:
+        print(f"😅 You have no new folder...")
+        close_imap_connection(imap_connection)
+        return
+
     print("These are your folder from your online 📫 mailbox: ")
-    for index, folder in enumerate(folders_list):
-        folder_name = _clean_folder_name(folder)
-        print(f"[{index}] {folder_name}")
+    for index, folder in enumerate(folder_options):
+        print(f"[{index}] {folder.display_name}")
 
     user_option = -1
-    while user_option < 0 or user_option >= len(folders_list):
+    while user_option < 0 or user_option >= len(folder_options):
         user_option = input(
             "Choose one of the online 🗂️ folders above to receive the emails or `q` to quit: "
         )
@@ -81,10 +90,12 @@ def get_folders():
             return
         elif user_option.isdigit():
             user_option = int(user_option)
-            if user_option >= 0 and user_option < len(folders_list):
-                mail_folder = _clean_folder_name(folders_list[user_option])
+            if user_option >= 0 and user_option < len(folder_options):
+                selected_folder = folder_options[user_option]
+                mail_folder = selected_folder.display_name
                 _get_mails(
                     mail_folder=mail_folder,
+                    imap_mailbox=select_mailbox_name(selected_folder.imap_name),
                     imap_connection=imap_connection,
                     remote_read_state=config.get_remote_read_state(),
                 )
@@ -134,6 +145,7 @@ def _get_mails(
     mail_folder="inbox",
     days_to_fetch: int = 0,
     imap_connection=None,
+    imap_mailbox=None,
     let_imap_connection_opened=False,
     remote_read_state=None,
 ):
@@ -152,7 +164,8 @@ def _get_mails(
         if imap_connection is None:
             return False
 
-    imap_connection.select(mail_folder)
+    select_mailbox = imap_mailbox if imap_mailbox is not None else mail_folder
+    imap_connection.select(select_mailbox)
 
     print(f"🗣️  Asking for the today`s mail in {mail_folder} (since {time})...")
     result, data = imap_connection.search(None, f"SINCE {time}")

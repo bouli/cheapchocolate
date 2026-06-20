@@ -581,6 +581,82 @@ class InteractiveFolderTests(unittest.TestCase):
         connection.select.assert_called_once_with("Archive")
         add_folder.assert_called_once_with("Archive")
 
+    def test_get_folders_selects_special_character_folder_safely(self):
+        connection = Mock()
+        connection.list.return_value = (
+            "OK",
+            [b'(\\HasNoChildren) "/" "! choir &2DTdHg-"'],
+        )
+        connection.search.return_value = ("OK", [b""])
+
+        with (
+            patch(
+                "cheapchocolate.modules.imap.get_imap_connection",
+                return_value=connection,
+            ),
+            patch("cheapchocolate.modules.imap.config.get_mails", return_value="1"),
+            patch(
+                "cheapchocolate.modules.imap.config.get_remote_read_state",
+                return_value="preserve",
+            ),
+            patch(
+                "cheapchocolate.modules.imap.config.get_mail_folders",
+                return_value={"! choir \U0001D11E": {"days_to_fetch": 1}},
+            ),
+            patch("builtins.input", return_value="0"),
+            patch("builtins.print") as print_mock,
+        ):
+            imap.get_folders()
+
+        print_mock.assert_any_call("[0] ! choir \U0001D11E")
+        connection.select.assert_called_once_with('"! choir &2DTdHg-"')
+
+    def test_get_folders_quits_without_selecting_folder(self):
+        connection = Mock()
+        connection.list.return_value = (
+            "OK",
+            [b'(\\HasNoChildren) "/" "INBOX"'],
+        )
+
+        with (
+            patch(
+                "cheapchocolate.modules.imap.get_imap_connection",
+                return_value=connection,
+            ),
+            patch("builtins.input", return_value="q"),
+        ):
+            imap.get_folders()
+
+        connection.select.assert_not_called()
+
+    def test_get_folders_retries_invalid_input_before_selecting_folder(self):
+        connection = Mock()
+        connection.list.return_value = (
+            "OK",
+            [b'(\\HasNoChildren) "/" "INBOX"'],
+        )
+        connection.search.return_value = ("OK", [b""])
+
+        with (
+            patch(
+                "cheapchocolate.modules.imap.get_imap_connection",
+                return_value=connection,
+            ),
+            patch("cheapchocolate.modules.imap.config.get_mails", return_value="1"),
+            patch(
+                "cheapchocolate.modules.imap.config.get_remote_read_state",
+                return_value="preserve",
+            ),
+            patch(
+                "cheapchocolate.modules.imap.config.get_mail_folders",
+                return_value={"INBOX": {"days_to_fetch": 1}},
+            ),
+            patch("builtins.input", side_effect=["not-a-number", "7", "0"]),
+        ):
+            imap.get_folders()
+
+        connection.select.assert_called_once_with("INBOX")
+
 
 if __name__ == "__main__":
     unittest.main()
