@@ -283,6 +283,83 @@ class MailFetchingTests(unittest.TestCase):
         connection.select.assert_called_once_with('"! choir &2DTdHg-"')
         close.assert_called_once_with(connection)
 
+    def test_get_mails_uses_readable_folder_for_local_file_when_protocol_name_differs(
+        self,
+    ):
+        message = build_message("Protocol Backed Folder")
+        connection = Mock()
+        connection.search.return_value = ("OK", [b"1"])
+        connection.fetch.side_effect = [
+            ("OK", [(b"1", message.as_bytes())]),
+            ("OK", [(b"1", message.as_bytes())]),
+        ]
+
+        with tempfile.TemporaryDirectory() as mailbox_folder:
+            with (
+                patch("cheapchocolate.modules.imap.config.get_mails", return_value="1"),
+                patch(
+                    "cheapchocolate.modules.imap.config.get_remote_read_state",
+                    return_value="preserve",
+                ),
+                patch(
+                    "cheapchocolate.modules.imap.get_local_mailbox_folder",
+                    return_value=mailbox_folder,
+                ),
+                patch("cheapchocolate.modules.imap.close_imap_connection"),
+            ):
+                imap._get_mails(
+                    mail_folder="! choir \U0001D11E",
+                    imap_mailbox='"! choir &2DTdHg-"',
+                    imap_connection=connection,
+                )
+
+            written_file = (
+                Path(mailbox_folder)
+                / "20240101123456 - Protocol Backed Folder [! choir \U0001D11E].md"
+            )
+            self.assertTrue(written_file.exists())
+            written_text = written_file.read_text()
+            self.assertIn('mail_folder: "! choir \U0001D11E"', written_text)
+            self.assertNotIn("&2DTdHg-", written_text)
+
+        connection.select.assert_called_once_with('"! choir &2DTdHg-"')
+
+    def test_get_mails_duplicate_check_uses_readable_folder_when_protocol_name_differs(
+        self,
+    ):
+        message = build_message("Already Local Special")
+        connection = Mock()
+        connection.search.return_value = ("OK", [b"1"])
+        connection.fetch.return_value = ("OK", [(b"1", message.as_bytes())])
+
+        with tempfile.TemporaryDirectory() as mailbox_folder:
+            existing_file = (
+                Path(mailbox_folder)
+                / "20240101123456 - Already Local Special [! choir \U0001D11E].md"
+            )
+            existing_file.write_text("existing local content")
+
+            with (
+                patch("cheapchocolate.modules.imap.config.get_mails", return_value="1"),
+                patch(
+                    "cheapchocolate.modules.imap.get_local_mailbox_folder",
+                    return_value=mailbox_folder,
+                ),
+                patch("cheapchocolate.modules.imap.close_imap_connection"),
+            ):
+                imap._get_mails(
+                    mail_folder="! choir \U0001D11E",
+                    imap_mailbox='"! choir &2DTdHg-"',
+                    imap_connection=connection,
+                    remote_read_state="mark_read",
+                )
+
+            self.assertEqual(existing_file.read_text(), "existing local content")
+
+        connection.select.assert_called_once_with('"! choir &2DTdHg-"')
+        connection.fetch.assert_called_once_with(b"1", imap.DUPLICATE_CHECK_FETCH)
+        connection.store.assert_not_called()
+
     def test_get_mails_keeps_ordinary_configured_folder_selection_unchanged(self):
         mail_folders = {"Archive": {"days_to_fetch": 1}}
         connection = Mock()
