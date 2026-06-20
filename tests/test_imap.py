@@ -8,6 +8,10 @@ from unittest.mock import Mock, call, patch
 
 from cheapchocolate.modules import imap
 
+GMAIL_REPORTED_FOLDER = "! choir \U0001D11E"
+GMAIL_REPORTED_IMAP_NAME = "! choir &2DTdHg-"
+GMAIL_REPORTED_SELECT_NAME = '"! choir &2DTdHg-"'
+
 
 @contextmanager
 def temporary_cwd():
@@ -452,6 +456,60 @@ class MailFetchingTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             imap.message_fetch_for_remote_read_state("invalid")
 
+    def test_configured_gmail_encoded_folder_marks_remote_read_with_safe_select(self):
+        message = build_message("Configured Gmail Label")
+        mail_folders = {
+            GMAIL_REPORTED_FOLDER: {
+                "days_to_fetch": 1,
+                "imap_name": GMAIL_REPORTED_IMAP_NAME,
+            }
+        }
+        connection = Mock()
+        connection.search.return_value = ("OK", [b"1"])
+        connection.fetch.side_effect = [
+            ("OK", [(b"1", message.as_bytes())]),
+            ("OK", [(b"1", message.as_bytes())]),
+        ]
+
+        with tempfile.TemporaryDirectory() as mailbox_folder:
+            with (
+                patch(
+                    "cheapchocolate.modules.imap.config.get_mail_folders",
+                    return_value=mail_folders,
+                ),
+                patch(
+                    "cheapchocolate.modules.imap.config.get_remote_read_state",
+                    return_value="mark_read",
+                ),
+                patch(
+                    "cheapchocolate.modules.imap.get_imap_connection",
+                    return_value=connection,
+                ),
+                patch(
+                    "cheapchocolate.modules.imap.get_local_mailbox_folder",
+                    return_value=mailbox_folder,
+                ),
+                patch("cheapchocolate.modules.imap.close_imap_connection"),
+            ):
+                imap.get_mails()
+
+            written_file = (
+                Path(mailbox_folder)
+                / f"20240101123456 - Configured Gmail Label [{GMAIL_REPORTED_FOLDER}].md"
+            )
+            written_text = written_file.read_text()
+
+        connection.select.assert_called_once_with(GMAIL_REPORTED_SELECT_NAME)
+        connection.fetch.assert_has_calls(
+            [
+                call(b"1", imap.DUPLICATE_CHECK_FETCH),
+                call(b"1", imap.MUTATING_MESSAGE_FETCH),
+            ]
+        )
+        self.assertIn(f'mail_folder: "{GMAIL_REPORTED_FOLDER}"', written_text)
+        self.assertNotIn(GMAIL_REPORTED_IMAP_NAME, written_text)
+        connection.store.assert_not_called()
+
 
 class MessageParsingTests(unittest.TestCase):
     def test_imaptime2datetime_converts_header_date(self):
@@ -648,6 +706,63 @@ class InteractiveFolderTests(unittest.TestCase):
                 call(b"1", imap.NON_MUTATING_MESSAGE_FETCH),
             ]
         )
+        connection.store.assert_not_called()
+
+    def test_get_folders_regression_gmail_encoded_folder_preserves_remote_read_state(
+        self,
+    ):
+        message = build_message("Interactive Gmail Label")
+        connection = Mock()
+        connection.list.return_value = (
+            "OK",
+            [b'(\\HasNoChildren) "/" "! choir &2DTdHg-"'],
+        )
+        connection.search.return_value = ("OK", [b"1"])
+        connection.fetch.side_effect = [
+            ("OK", [(b"1", message.as_bytes())]),
+            ("OK", [(b"1", message.as_bytes())]),
+        ]
+
+        with tempfile.TemporaryDirectory() as mailbox_folder:
+            with (
+                patch(
+                    "cheapchocolate.modules.imap.get_imap_connection",
+                    return_value=connection,
+                ),
+                patch("cheapchocolate.modules.imap.config.get_mails", return_value="1"),
+                patch(
+                    "cheapchocolate.modules.imap.config.get_remote_read_state",
+                    return_value="preserve",
+                ),
+                patch(
+                    "cheapchocolate.modules.imap.config.get_mail_folders",
+                    return_value={GMAIL_REPORTED_FOLDER: {"days_to_fetch": 1}},
+                ),
+                patch(
+                    "cheapchocolate.modules.imap.get_local_mailbox_folder",
+                    return_value=mailbox_folder,
+                ),
+                patch("builtins.input", return_value="0"),
+                patch("builtins.print") as print_mock,
+            ):
+                imap.get_folders()
+
+            written_file = (
+                Path(mailbox_folder)
+                / f"20240101123456 - Interactive Gmail Label [{GMAIL_REPORTED_FOLDER}].md"
+            )
+            written_text = written_file.read_text()
+
+        print_mock.assert_any_call(f"[0] {GMAIL_REPORTED_FOLDER}")
+        connection.select.assert_called_once_with(GMAIL_REPORTED_SELECT_NAME)
+        connection.fetch.assert_has_calls(
+            [
+                call(b"1", imap.DUPLICATE_CHECK_FETCH),
+                call(b"1", imap.NON_MUTATING_MESSAGE_FETCH),
+            ]
+        )
+        self.assertIn(f'mail_folder: "{GMAIL_REPORTED_FOLDER}"', written_text)
+        self.assertNotIn(GMAIL_REPORTED_IMAP_NAME, written_text)
         connection.store.assert_not_called()
 
     def test_get_folders_honors_configured_mark_read_mode(self):
