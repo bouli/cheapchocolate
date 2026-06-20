@@ -179,7 +179,9 @@ def _get_mails(
             return False
 
     select_mailbox = (
-        imap_mailbox if imap_mailbox is not None else prepare_select_mailbox(mail_folder)
+        imap_mailbox
+        if imap_mailbox is not None
+        else prepare_select_mailbox(mail_folder)
     )
     imap_connection.select(select_mailbox)
 
