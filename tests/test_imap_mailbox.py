@@ -7,6 +7,7 @@ from cheapchocolate.modules.imap_mailbox import (
     encode_modified_utf7,
     parse_mailbox_list_entries,
     parse_mailbox_list_entry,
+    prepare_select_mailbox,
     select_mailbox_name,
 )
 
@@ -120,6 +121,18 @@ class SelectMailboxNameTests(unittest.TestCase):
         self.assertEqual(
             select_mailbox_name('Project "Alpha"'),
             '"Project \\"Alpha\\""',
+        )
+
+    def test_prepare_select_mailbox_encodes_readable_non_ascii_name(self):
+        self.assertEqual(
+            prepare_select_mailbox("! choir \U0001D11E"),
+            '"! choir &2DTdHg-"',
+        )
+
+    def test_prepare_select_mailbox_preserves_protocol_name(self):
+        self.assertEqual(
+            prepare_select_mailbox("! choir &2DTdHg-", is_protocol_name=True),
+            '"! choir &2DTdHg-"',
         )
 
 

@@ -20,6 +20,15 @@ def select_mailbox_name(imap_name):
     return f'"{escaped}"'
 
 
+def prepare_select_mailbox(mailbox_name, is_protocol_name=False):
+    if is_protocol_name:
+        imap_name = mailbox_name
+    else:
+        imap_name = encode_modified_utf7(mailbox_name)
+
+    return select_mailbox_name(imap_name)
+
+
 def parse_mailbox_list_entries(entries):
     options = []
     for entry in entries:

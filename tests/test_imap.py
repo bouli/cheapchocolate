@@ -236,6 +236,73 @@ class MailFetchingTests(unittest.TestCase):
         )
         connection.store.assert_not_called()
 
+    def test_get_mails_selects_direct_special_character_folder_safely(self):
+        connection = Mock()
+        connection.search.return_value = ("OK", [b""])
+
+        with (
+            patch("cheapchocolate.modules.imap.config.get_mails", return_value="1"),
+            patch(
+                "cheapchocolate.modules.imap.config.get_remote_read_state",
+                return_value="preserve",
+            ),
+            patch(
+                "cheapchocolate.modules.imap.get_imap_connection",
+                return_value=connection,
+            ),
+            patch("cheapchocolate.modules.imap.close_imap_connection"),
+        ):
+            imap.get_mails("! choir \U0001D11E")
+
+        connection.select.assert_called_once_with('"! choir &2DTdHg-"')
+        connection.search.assert_called_once()
+
+    def test_get_mails_selects_saved_protocol_mailbox_name_safely(self):
+        mail_folders = {
+            "! choir \U0001D11E": {
+                "days_to_fetch": 1,
+                "imap_name": "! choir &2DTdHg-",
+            }
+        }
+        connection = Mock()
+        connection.search.return_value = ("OK", [b""])
+
+        with (
+            patch(
+                "cheapchocolate.modules.imap.config.get_mail_folders",
+                return_value=mail_folders,
+            ),
+            patch(
+                "cheapchocolate.modules.imap.get_imap_connection",
+                return_value=connection,
+            ),
+            patch("cheapchocolate.modules.imap.close_imap_connection") as close,
+        ):
+            imap.get_mails()
+
+        connection.select.assert_called_once_with('"! choir &2DTdHg-"')
+        close.assert_called_once_with(connection)
+
+    def test_get_mails_keeps_ordinary_configured_folder_selection_unchanged(self):
+        mail_folders = {"Archive": {"days_to_fetch": 1}}
+        connection = Mock()
+        connection.search.return_value = ("OK", [b""])
+
+        with (
+            patch(
+                "cheapchocolate.modules.imap.config.get_mail_folders",
+                return_value=mail_folders,
+            ),
+            patch(
+                "cheapchocolate.modules.imap.get_imap_connection",
+                return_value=connection,
+            ),
+            patch("cheapchocolate.modules.imap.close_imap_connection"),
+        ):
+            imap.get_mails()
+
+        connection.select.assert_called_once_with("Archive")
+
     def test_get_mails_uses_mutating_fetch_when_config_marks_remote_read(self):
         message = EmailMessage()
         message["from"] = "sender@example.com"

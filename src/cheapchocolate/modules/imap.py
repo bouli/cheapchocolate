@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 from cheapchocolate.core import config
 from cheapchocolate.modules.imap_mailbox import (
     parse_mailbox_list_entries,
+    prepare_select_mailbox,
     select_mailbox_name,
 )
 from cheapchocolate.modules.mailbox import get_local_mailbox_folder, get_local_mails
@@ -135,9 +136,16 @@ def get_mails(mail_folder="mail_folders", remote_read_state=None):
             return False
 
         for mail_folder, data in mail_folders.items():
+            configured_imap_name = data.get("imap_name")
+            imap_mailbox = (
+                prepare_select_mailbox(configured_imap_name, is_protocol_name=True)
+                if configured_imap_name is not None
+                else prepare_select_mailbox(mail_folder)
+            )
             _get_mails(
                 mail_folder=mail_folder,
                 days_to_fetch=int(data["days_to_fetch"]),
+                imap_mailbox=imap_mailbox,
                 imap_connection=imap_connection,
                 let_imap_connection_opened=True,
                 remote_read_state=remote_read_state,
@@ -170,7 +178,9 @@ def _get_mails(
         if imap_connection is None:
             return False
 
-    select_mailbox = imap_mailbox if imap_mailbox is not None else mail_folder
+    select_mailbox = (
+        imap_mailbox if imap_mailbox is not None else prepare_select_mailbox(mail_folder)
+    )
     imap_connection.select(select_mailbox)
 
     print(f"🗣️  Asking for the today`s mail in {mail_folder} (since {time})...")
