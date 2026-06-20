@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import yaml
 from conveoconfi import create_and_read_config_file
 
@@ -113,3 +115,36 @@ def test_complete_config_file_preserves_existing_nested_values(tmp_path):
         "days_to_fetch": 3,
         "remote_read_state": "preserve",
     }
+
+
+def test_add_mail_folder_keeps_existing_simple_folder_shape():
+    with (
+        patch("cheapchocolate.core.config.get_files", return_value="mail_folders.yaml"),
+        patch("cheapchocolate.core.config.get_mails", return_value="1"),
+        patch("cheapchocolate.core.config._append_config_file") as append_config_file,
+    ):
+        config.add_mail_folder("Archive")
+
+    append_config_file.assert_called_once_with(
+        {"Archive": {"days_to_fetch": "1"}},
+        file_name="mail_folders.yaml",
+    )
+
+
+def test_add_mail_folder_stores_imap_name_when_protocol_name_differs():
+    with (
+        patch("cheapchocolate.core.config.get_files", return_value="mail_folders.yaml"),
+        patch("cheapchocolate.core.config.get_mails", return_value="1"),
+        patch("cheapchocolate.core.config._append_config_file") as append_config_file,
+    ):
+        config.add_mail_folder("! choir \U0001D11E", imap_name="! choir &2DTdHg-")
+
+    append_config_file.assert_called_once_with(
+        {
+            "! choir \U0001D11E": {
+                "days_to_fetch": "1",
+                "imap_name": "! choir &2DTdHg-",
+            }
+        },
+        file_name="mail_folders.yaml",
+    )

@@ -105,7 +105,13 @@ def get_folders():
                         f"🗃️ Would you like to add `{mail_folder}` to your default `mail_folder`? [Y]es or anything else to No: "
                     )
                     if add_default_folder.upper() == "Y":
-                        config.add_mail_folder(mail_folder)
+                        if selected_folder.imap_name != mail_folder:
+                            config.add_mail_folder(
+                                mail_folder,
+                                imap_name=selected_folder.imap_name,
+                            )
+                        else:
+                            config.add_mail_folder(mail_folder)
                         print(f"🗃️ {mail_folder} added to your default `mail_folder`.")
             else:
                 user_option = -1

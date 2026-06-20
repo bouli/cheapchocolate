@@ -108,9 +108,11 @@ def get_mail_folders():
     )
 
 
-def add_mail_folder(mail_folder):
+def add_mail_folder(mail_folder, imap_name=None):
     mail_folders = get_files(param="mail_folders")
     data = {mail_folder: {"days_to_fetch": get_mails("days_to_fetch")}}
+    if imap_name is not None and imap_name != mail_folder:
+        data[mail_folder]["imap_name"] = imap_name
     _append_config_file(data, file_name=mail_folders)
 
 

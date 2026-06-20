@@ -611,6 +611,38 @@ class InteractiveFolderTests(unittest.TestCase):
         print_mock.assert_any_call("[0] ! choir \U0001D11E")
         connection.select.assert_called_once_with('"! choir &2DTdHg-"')
 
+    def test_get_folders_adds_special_character_folder_with_protocol_name(self):
+        connection = Mock()
+        connection.list.return_value = (
+            "OK",
+            [b'(\\HasNoChildren) "/" "! choir &2DTdHg-"'],
+        )
+        connection.search.return_value = ("OK", [b""])
+
+        with (
+            patch(
+                "cheapchocolate.modules.imap.get_imap_connection",
+                return_value=connection,
+            ),
+            patch("cheapchocolate.modules.imap.config.get_mails", return_value="1"),
+            patch(
+                "cheapchocolate.modules.imap.config.get_remote_read_state",
+                return_value="preserve",
+            ),
+            patch(
+                "cheapchocolate.modules.imap.config.get_mail_folders",
+                return_value={"INBOX": {"days_to_fetch": 1}},
+            ),
+            patch("cheapchocolate.modules.imap.config.add_mail_folder") as add_folder,
+            patch("builtins.input", side_effect=["0", "Y"]),
+        ):
+            imap.get_folders()
+
+        add_folder.assert_called_once_with(
+            "! choir \U0001D11E",
+            imap_name="! choir &2DTdHg-",
+        )
+
     def test_get_folders_quits_without_selecting_folder(self):
         connection = Mock()
         connection.list.return_value = (
